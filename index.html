@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blank Talk — 호스트 화면</title>
+
+<!-- 사이트 공유 시 미리보기 (Open Graph) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blank Talk">
+<meta property="og:description" content="빈칸을 채우는 대화, 마음을 여는 순간">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="812">
+<meta property="og:image:height" content="812">
+
+<!-- 트위터/X 카드 -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Blank Talk">
+<meta name="twitter:description" content="빈칸을 채우는 대화, 마음을 여는 순간">
+<meta name="twitter:image" content="og-image.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   블랭크톡 첫 와이어프레임 v2
+   v1 → v2 변경:
+   - 카드 세 장 간격 좁힘 (보드 max-width 800px)
+   - confirm() 대신 커스텀 모달
+   - "이미 카드가 펼쳐져 있습니다" 디폴트를 '발표자 바꾸기'로
+   - '자리' → '차례'
+   - [대화 끝내기] 버튼 추가 (게임 모드로 가는 입구)
+   ========================================================= */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* hidden 속성이 어떤 display 규칙보다 우선하도록 */
+[hidden] { display: none !important; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #FAF7F0;
+  color: #2A2A2A;
+  min-height: 100vh;
+  padding: 24px 32px;
+  touch-action: manipulation;   /* 모바일 더블탭 줌 방지 */
+}
+
+/* 헤더 */
+header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+header .logo {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 38px;
+  color: #D97640;
+  letter-spacing: 1px;
+}
+header .subtitle {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* ---------- 설정 화면 (참가자 명단 입력) ---------- */
+#setup {
+  max-width: 480px;
+  margin: 48px auto;
+  padding: 32px;
+  background: white;
+  border: 0.5px solid #E5E0D5;
+  border-radius: 12px;
+}
+#setup h2 {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 26px;
+  color: #2A2A2A;
+  margin-bottom: 8px;
+}
+#setup .hint {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 24px;
+}
+#setup .name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#setup .name-row label {
+  width: 24px;
+  text-align: right;
+  font-size: 13px;
+  color: #888;
+}
+#setup input[type="text"] {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 15px;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 8px;
+  background: #FDFCF8;
+}
+#setup input[type="text"]:focus {
+  outline: none;
+  border-color: #D97640;
+}
+#setup .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+#setup button {
+  padding: 10px 20px;
+  font-size: 14px;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-family: inherit;
+}
+#setup button:hover { background: #F5F0E5; }
+#setup button.primary {
+  background: #D97640;
+  color: white;
+  border-color: #D97640;
+  margin-left: auto;
+}
+#setup button.primary:hover { background: #C56830; }
+
+/* ---------- 메인 보드 ---------- */
+#board {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 16px;            /* v1: 32px → 16px, 더 모이는 느낌 */
+  align-items: center;
+  min-height: 500px;
+  padding: 24px 0;
+  max-width: 800px;     /* 보드 전체 폭을 좁혀 가운데 정렬 */
+  margin: 0 auto;
+}
+
+/* 카드 더미 (긍정/부정) */
+.pile {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+.pile:hover { transform: translateY(-4px); }
+.pile.disabled { cursor: not-allowed; opacity: 0.4; }
+.pile.disabled:hover { transform: none; }
+
+.pile .back-image {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 13 / 21;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+  margin: 0 auto;
+}
+.pile .pile-label {
+  text-align: center;
+  margin-top: 12px;
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 22px;
+  color: #888;
+}
+.pile .pile-count {
+  text-align: center;
+  font-size: 12px;
+  color: #BBB;
+  margin-top: 2px;
+}
+
+.pile.positive .back-image { background-image: url('back-positive.jpg'); }
+.pile.negative .back-image { background-image: url('back-negative.jpg'); }
+
+/* 가운데 빈 영역 / 펼쳐진 카드 */
+#spotlight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 460px;
+}
+#spotlight .empty {
+  text-align: center;
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 22px;
+  color: #BBB;
+  line-height: 1.6;
+}
+#spotlight .card {
+  width: 260px;
+  aspect-ratio: 13 / 21;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  animation: cardIn 0.35s ease-out;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+#spotlight .card:hover { transform: translateY(-2px); }
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+#spotlight .card .card-top {
+  flex: 1;
+  background: #FBF4D8;
+  position: relative;
+}
+#spotlight .card .q-open,
+#spotlight .card .q-close,
+#spotlight .card .hamyeon {
+  font-family: 'Nanum Pen Script', cursive;
+  color: #D97640;
+  position: absolute;
+}
+#spotlight .card .q-open  { top: 12px;    left: 18px;   font-size: 32px; }
+#spotlight .card .q-close { bottom: 56px; right: 22px;  font-size: 32px; }
+#spotlight .card .hamyeon { bottom: 14px; right: 20px;  font-size: 18px; }
+#spotlight .card .card-bottom {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+#spotlight .card .response {
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 26px;
+  color: #2A2A2A;
+  line-height: 1.2;
+  text-align: center;
+}
+#spotlight .card-meta {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #888;
+}
+#spotlight .card-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #BBB;
+}
+
+/* 카드 색 매핑 (JSON의 color 라벨 → 실제 색) */
+.card-yellow .card-bottom { background: #ECD850; }
+.card-pink   .card-bottom { background: #E26887; }
+.card-mint   .card-bottom { background: #88DBC2; }
+.card-coral  .card-bottom { background: #EC826B; }
+.card-green  .card-bottom { background: #ABD971; }
+
+/* ---------- 참가자 닉네임 행 ---------- */
+#participant-controls {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 8px;
+}
+#participant-controls .shuffle-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  background: transparent;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 16px;
+  cursor: pointer;
+  color: #888;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+#participant-controls .shuffle-btn:hover {
+  background: #F5F0E5;
+  color: #2A2A2A;
+}
+
+#participants {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px;
+  margin-top: 24px;
+  border-top: 0.5px solid #E5E0D5;
+}
+#participants .participant {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: inherit;
+  background: white;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#participants .participant:hover {
+  border-color: #D97640;
+}
+#participants .participant.active {
+  background: #E26887;
+  color: white;
+  border-color: #E26887;
+  box-shadow: 0 0 0 4px rgba(226, 104, 135, 0.15);
+}
+#participants .participant.played {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #F0EBE0;
+}
+#participants .participant.played:hover {
+  border-color: #D5CFC0;
+  transform: none;
+}
+#participants .participant.played .dot {
+  background: #999;
+}
+#participants .participant.swapping {
+  background: white;
+  border: 2px dashed #D97640;
+  color: #D97640;
+  box-shadow: 0 0 0 4px rgba(217, 118, 64, 0.08);
+}
+#participants .participant .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #DDD;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+#participants .participant.active .dot { background: white; }
+
+/* ---------- 끝내기 버튼 영역 ---------- */
+#actions {
+  text-align: center;
+  margin-top: 8px;
+  padding: 0 16px 16px;
+}
+#actions .end-btn {
+  padding: 10px 24px;
+  font-size: 14px;
+  background: transparent;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 24px;
+  cursor: pointer;
+  color: #888;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+#actions .end-btn:hover {
+  background: #F5F0E5;
+  border-color: #D97640;
+  color: #D97640;
+}
+
+/* 라운드 기록 */
+#log {
+  max-width: 600px;
+  margin: 8px auto 0;
+  padding: 16px;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+#log .log-item {
+  display: inline-block;
+  margin: 0 6px;
+}
+
+/* ---------- Blank Game ---------- */
+#game-board {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#game-board .game-title {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 28px;
+  color: #2A2A2A;
+  margin-bottom: 28px;
+  text-align: center;
+}
+#game-board .game-card {
+  width: 260px;
+  aspect-ratio: 13 / 21;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  animation: cardIn 0.35s ease-out;
+}
+#game-board .game-card .card-top {
+  flex: 1;
+  background: #FBF4D8;
+  position: relative;
+}
+#game-board .game-card .q-open,
+#game-board .game-card .q-close,
+#game-board .game-card .hamyeon {
+  font-family: 'Nanum Pen Script', cursive;
+  color: #D97640;
+  position: absolute;
+}
+#game-board .game-card .q-open  { top: 12px;    left: 18px;   font-size: 32px; }
+#game-board .game-card .q-close { bottom: 56px; right: 22px;  font-size: 32px; }
+#game-board .game-card .hamyeon { bottom: 14px; right: 20px;  font-size: 18px; }
+#game-board .game-card .card-bottom {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+#game-board .game-card .response {
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 26px;
+  color: #2A2A2A;
+  line-height: 1.2;
+  text-align: center;
+}
+#game-board .game-card-type {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #888;
+}
+
+/* 게임 시작 대기 카드 */
+#game-board .waiting-card {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+#game-board .waiting-card:hover { transform: translateY(-2px); }
+#game-board .waiting-card .card-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#game-board .waiting-card .card-bottom {
+  background: #D97640;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#game-board .waiting-card .waiting-text-top {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 28px;
+  color: #D97640;
+  line-height: 1.2;
+  text-align: center;
+}
+#game-board .waiting-card .waiting-text-bottom {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 28px;
+  color: white;
+  line-height: 1.2;
+  text-align: center;
+}
+#game-board .waiting-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #BBB;
+}
+
+#game-guess-area {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: 70px;
+}
+#game-guess-area .guess-prompt {
+  font-size: 16px;
+  color: #2A2A2A;
+  text-align: center;
+}
+#game-guess-area .guess-prompt strong {
+  color: #E26887;
+}
+#game-guess-area .guess-status {
+  margin-top: 4px;
+  background: white;
+  border: 0.5px solid #E5E0D5;
+  border-radius: 8px;
+  padding: 10px 18px;
+  min-width: 220px;
+}
+#game-guess-area .guess-status .status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 13px;
+}
+#game-guess-area .guess-status .status-row .label {
+  color: #888;
+}
+#game-guess-area .guess-status .status-row .value {
+  color: #2A2A2A;
+  font-weight: 500;
+}
+#game-guess-area .guess-status .status-row .value.highlight {
+  color: #E26887;
+}
+#game-guess-area .guess-status .status-row .value.empty {
+  color: #CCC;
+  font-weight: 400;
+}
+
+#game-guess-area .inline-alert {
+  margin-top: 4px;
+  padding: 8px 16px;
+  background: #FFF5EE;
+  border: 0.5px solid #F0C4A8;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #D97640;
+  animation: fadeIn 0.2s ease;
+}
+
+#game-guess-area .content-buttons {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+#game-guess-area .content-buttons button {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 0.5px solid #D5CFC0;
+  background: white;
+  color: #2A2A2A;
+}
+#game-guess-area .content-buttons button.correct {
+  background: #E26887;
+  color: white;
+  border-color: #E26887;
+}
+#game-guess-area .content-buttons button.correct:hover { background: #C9577A; }
+#game-guess-area .content-buttons button.wrong:hover { background: #F5F0E5; }
+#game-guess-area .guess-buttons {
+  display: flex;
+  gap: 12px;
+}
+#game-guess-area .guess-buttons button {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 0.5px solid #D5CFC0;
+  background: white;
+  color: #2A2A2A;
+}
+#game-guess-area .guess-buttons button.correct {
+  background: #E26887;
+  color: white;
+  border-color: #E26887;
+}
+#game-guess-area .guess-buttons button.correct:hover { background: #C9577A; }
+#game-guess-area .guess-buttons button.wrong:hover { background: #F5F0E5; }
+
+/* 게임용 참가자 행 */
+#game-participants {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px;
+  margin-top: 16px;
+  border-top: 0.5px solid #E5E0D5;
+}
+#game-participants .player {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: inherit;
+  background: white;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#game-participants .player:hover { border-color: #E26887; }
+#game-participants .player .score {
+  font-size: 11px;
+  background: #FBF4D8;
+  color: #888;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+#game-participants .player.selected {
+  background: #FFF5EE;
+  border: 2px dashed #E26887;
+  color: #E26887;
+}
+#game-participants .player.eliminated {
+  opacity: 0.25;
+  cursor: not-allowed;
+  background: #F0EBE0;
+}
+#game-participants .player.eliminated:hover {
+  border-color: #D5CFC0;
+}
+
+#game-status {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+}
+
+/* 게임 결과 */
+#game-result-area {
+  text-align: center;
+}
+#game-result-area .winner {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 32px;
+  color: #E26887;
+  margin: 12px 0 24px;
+  text-align: center;
+}
+#game-result-area .scores {
+  background: white;
+  border: 0.5px solid #E5E0D5;
+  border-radius: 12px;
+  padding: 16px 24px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+#game-result-area .score-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 0.5px solid #F0EBE0;
+  font-size: 15px;
+}
+#game-result-area .score-row:last-child { border-bottom: none; }
+#game-result-area .score-row.top {
+  color: #E26887;
+  font-weight: 500;
+}
+#game-result-area .actions {
+  margin-top: 32px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+#game-result-area .restart-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background: white;
+  color: #2A2A2A;
+  text-decoration: none;
+  border: 0.5px solid #D5CFC0;
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#game-result-area .restart-button:hover {
+  background: #F5F0E5;
+  border-color: #D97640;
+}
+#game-result-area .buy-button {
+  display: inline-block;
+  padding: 12px 28px;
+  background: #D97640;
+  color: white;
+  text-decoration: none;
+  border-radius: 24px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: background 0.2s ease;
+}
+#game-result-area .buy-button:hover { background: #C56830; }
+
+/* ---------- 커스텀 모달 ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+  background: white;
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+.modal-message {
+  font-size: 15px;
+  color: #2A2A2A;
+  margin-bottom: 24px;
+  line-height: 1.65;
+  text-align: center;
+}
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.modal-buttons button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 0.5px solid #D5CFC0;
+  background: white;
+  color: #2A2A2A;
+}
+.modal-buttons button.primary {
+  background: #D97640;
+  color: white;
+  border-color: #D97640;
+}
+.modal-buttons button.primary:hover { background: #C56830; }
+.modal-buttons button.secondary:hover { background: #F5F0E5; }
+
+
+/* =========================================================
+   모바일 대응 (태블릿 ~ 폰)
+   ========================================================= */
+@media (max-width: 768px) {
+  body {
+    padding: 16px;
+  }
+  header {
+    margin-bottom: 20px;
+  }
+  header .logo {
+    font-size: 30px;
+  }
+  header .subtitle {
+    font-size: 13px;
+  }
+
+  /* 설정 화면 */
+  #setup {
+    margin: 24px auto;
+    padding: 20px;
+  }
+  #setup h2 {
+    font-size: 22px;
+  }
+  #setup .actions {
+    flex-wrap: wrap;
+  }
+  #setup .actions button {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  #setup .actions button.primary {
+    margin-left: 0;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  /* Blank Talk 보드 */
+  #board {
+    gap: 8px;
+    padding: 12px 0;
+    min-height: auto;
+  }
+  .pile .back-image {
+    max-width: 100%;
+  }
+  .pile .pile-label {
+    font-size: 18px;
+    margin-top: 8px;
+  }
+  .pile .pile-count {
+    font-size: 11px;
+  }
+
+  /* 가운데 카드 (Blank Talk) */
+  #spotlight {
+    min-height: 280px;
+  }
+  #spotlight .card {
+    width: min(180px, 38vw);
+  }
+  #spotlight .card .response {
+    font-size: 18px;
+  }
+  #spotlight .card .q-open,
+  #spotlight .card .q-close {
+    font-size: 24px;
+  }
+  #spotlight .card .hamyeon {
+    font-size: 14px;
+  }
+  #spotlight .empty {
+    font-size: 18px;
+  }
+
+  /* 닉네임 행 */
+  #participants,
+  #game-participants {
+    gap: 8px;
+    padding: 16px 12px;
+  }
+  #participants .participant,
+  #game-participants .player {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  #participant-controls .shuffle-btn {
+    font-size: 11px;
+  }
+
+  /* Blank Game */
+  #game-board {
+    padding: 20px 0 16px;
+  }
+  #game-board .game-title {
+    font-size: 22px;
+    padding: 0 16px;
+  }
+  #game-board .game-card {
+    width: min(220px, 60vw);
+  }
+  #game-board .game-card .response {
+    font-size: 20px;
+  }
+  #game-board .game-card .q-open,
+  #game-board .game-card .q-close {
+    font-size: 26px;
+  }
+  #game-board .waiting-card .waiting-text-top,
+  #game-board .waiting-card .waiting-text-bottom {
+    font-size: 22px;
+  }
+  #game-guess-area .guess-prompt {
+    font-size: 14px;
+    padding: 0 16px;
+  }
+  #game-guess-area .guess-status {
+    min-width: 200px;
+  }
+
+  /* 모달 */
+  .modal-box {
+    padding: 20px 24px;
+    max-width: 92%;
+  }
+  .modal-message {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 일반 스마트폰 */
+  body {
+    padding: 12px;
+  }
+  header .logo {
+    font-size: 26px;
+  }
+
+  /* Blank Talk 보드 — 카드 더미가 너무 좁아지지 않게 */
+  #board {
+    gap: 4px;
+  }
+  .pile .pile-label {
+    font-size: 15px;
+  }
+
+  /* 가운데 카드 */
+  #spotlight .card {
+    width: min(140px, 36vw);
+  }
+  #spotlight .card .response {
+    font-size: 16px;
+  }
+  #spotlight .empty {
+    font-size: 15px;
+  }
+
+  /* 닉네임 — 더 컴팩트 */
+  #participants .participant,
+  #game-participants .player {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  #game-participants .player .score {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  /* Blank Game */
+  #game-board .game-card {
+    width: min(180px, 55vw);
+  }
+  #game-board .game-card .response {
+    font-size: 18px;
+  }
+  #game-board .waiting-card .waiting-text-top,
+  #game-board .waiting-card .waiting-text-bottom {
+    font-size: 20px;
+  }
+
+  /* 결과 화면 — 버튼 세로 쌓기 */
+  #game-result-area .actions {
+    flex-direction: column;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #game-result-area .restart-button,
+  #game-result-area .buy-button {
+    width: 100%;
+    text-align: center;
+  }
+  #game-result-area .winner {
+    font-size: 28px;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Blank Talk</div>
+  <div class="subtitle">빈칸을 채우는 대화, 마음을 여는 순간</div>
+</header>
+
+<!-- ========== 1단계: 참가자 명단 입력 ========== -->
+<section id="setup">
+  <h2>친해지고 싶은 사람과 함께 Blank Talk를 해볼까요?</h2>
+  <p class="hint">서로를 부를 때 사용할 닉네임 또는 이름을 적어 주세요. 2명 이상 9명 이하.</p>
+  <div id="name-inputs"></div>
+  <div class="actions">
+    <button onclick="addNameRow()">+ 한 명 더</button>
+    <button onclick="removeNameRow()">− 한 명 빼기</button>
+    <button class="primary" onclick="startSession()">시작하기</button>
+  </div>
+</section>
+
+<!-- ========== 2단계: 메인 보드 ========== -->
+<section id="board" hidden>
+  <div class="pile positive" onclick="drawCard('positive')">
+    <div class="back-image"></div>
+    <div class="pile-label">OK</div>
+    <div class="pile-count" id="positive-count">40장 남음</div>
+  </div>
+
+  <div id="spotlight">
+    <div class="empty">
+      플레이어 순서를 정한 후에<br>
+      긍정/부정 카드 중 한쪽을 선택해 주세요
+    </div>
+  </div>
+
+  <div class="pile negative" onclick="drawCard('negative')">
+    <div class="back-image"></div>
+    <div class="pile-label">Not OK</div>
+    <div class="pile-count" id="negative-count">40장 남음</div>
+  </div>
+</section>
+
+<!-- 참가자 닉네임 행 -->
+<nav id="participants" hidden></nav>
+<div id="participant-controls" hidden>
+  <button class="shuffle-btn" onclick="shuffleParticipants()">🔀 순서 섞기</button>
+</div>
+
+<!-- 끝내기 버튼 -->
+<div id="actions" hidden>
+  <button class="end-btn" onclick="endTalk()">대화 끝내기 →</button>
+</div>
+
+<!-- 라운드 기록 -->
+<div id="log" hidden></div>
+
+
+<!-- ========== Blank Game ========== -->
+<section id="game-board" hidden>
+  <div class="game-title">이 답을 한 사람은 누구일까요?</div>
+  <div id="game-card-area"></div>
+  <div id="game-guess-area"></div>
+</section>
+
+<nav id="game-participants" hidden></nav>
+
+<div id="game-actions" hidden>
+  <button class="end-btn" onclick="endGame()">게임 끝내기 →</button>
+</div>
+
+<div id="game-status" hidden></div>
+
+<!-- 커스텀 모달 -->
+<div id="modal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <p class="modal-message" id="modal-message"></p>
+    <div class="modal-buttons">
+      <button id="modal-secondary" class="secondary"></button>
+      <button id="modal-primary" class="primary"></button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* =========================================================
+   상태 관리
+   ========================================================= */
+const state = {
+  cards: null,              // cards.json에서 로딩 — 80장
+  participants: [],         // 참가자 닉네임 ["민지", "준영", ...]
+  activeParticipant: null,  // 지금 활성화된 발표자
+  currentCard: null,        // 가운데 펼쳐진 카드
+  usedCards: new Set(),     // 이번 대화에서 이미 뽑힌 카드 ID
+  rounds: [],               // [{participant, cardId, cardType, round, timestamp}]
+  currentRound: 1,          // 지금 몇 번째 바퀴(라운드)인가
+  playedInRound: new Set(), // 이번 라운드에 이미 답한 사람들
+  swappingIndex: null,      // 순서 바꾸기 모드 (null이면 일반, 숫자면 그 위치 닉을 잡고 있음)
+
+  // ----- Blank Game 상태 -----
+  mode: 'talk',                       // 'talk' | 'game' | 'game-result'
+  gameStarted: false,                 // 게임 시작 카드를 지나갔는가
+  gameDeck: [],                       // 게임용 카드 묶음 (rounds를 셔플한 복사본)
+  gameIndex: 0,                       // 지금 몇 번째 게임 카드인가
+  gameScores: {},                     // { participant: score }
+  eliminatedForCard: new Set(),       // 이번 카드에서 박탈된 사람들 (오답)
+  selectedGuesser: null,              // 호스트가 1단계에 클릭한 사람 (도전자)
+  guessedAnswer: null,                // 도전자가 지목한 답한사람 (2단계)
+  contentCheckStage: false,           // 사람은 맞췄고, 이제 답한 내용을 확인하는 단계
+
+  sessionId: 's_' + Date.now()  // 세션 식별자 (나중에 Firebase에 쓰일 형태)
+};
+
+
+/* =========================================================
+   초기화
+   ========================================================= */
+async function init() {
+  try {
+    const res = await fetch('cards.json');
+    const data = await res.json();
+    state.cards = data.cards;
+    console.log('카드 ' + state.cards.length + '장 로딩 완료');
+  } catch (err) {
+    alert('cards.json을 불러오지 못했습니다. Live Server로 열고 있는지 확인해 주세요.');
+    console.error(err);
+  }
+  // 입력 행 3개로 시작 (호스트가 자유롭게 추가/삭제)
+  for (let i = 0; i < 3; i++) addNameRow();
+}
+
+
+/* =========================================================
+   커스텀 모달
+   ========================================================= */
+function showModal(opts) {
+  // opts: { message, primaryLabel, secondaryLabel, onPrimary, onSecondary }
+  document.getElementById('modal-message').innerHTML = opts.message;
+
+  const primary = document.getElementById('modal-primary');
+  const secondary = document.getElementById('modal-secondary');
+
+  primary.textContent = opts.primaryLabel || '확인';
+  primary.onclick = () => { hideModal(); opts.onPrimary && opts.onPrimary(); };
+
+  if (opts.secondaryLabel) {
+    secondary.textContent = opts.secondaryLabel;
+    secondary.style.display = '';
+    secondary.onclick = () => { hideModal(); opts.onSecondary && opts.onSecondary(); };
+  } else {
+    secondary.style.display = 'none';
+  }
+
+  document.getElementById('modal').hidden = false;
+  setTimeout(() => primary.focus(), 50);  // Enter 키로 primary 실행
+}
+
+function hideModal() {
+  document.getElementById('modal').hidden = true;
+}
+
+
+/* =========================================================
+   설정 화면 — 참가자 명단 입력
+   ========================================================= */
+function addNameRow() {
+  const wrap = document.getElementById('name-inputs');
+  const count = wrap.children.length;
+  if (count >= 9) return;
+
+  const row = document.createElement('div');
+  row.className = 'name-row';
+  row.innerHTML = `
+    <label>${count + 1}</label>
+    <input type="text" placeholder="Player" maxlength="12">
+  `;
+  wrap.appendChild(row);
+}
+
+function removeNameRow() {
+  const wrap = document.getElementById('name-inputs');
+  if (wrap.children.length <= 2) return;
+  wrap.removeChild(wrap.lastChild);
+}
+
+// 보드 화면에서 참가자 순서를 무작위로 섞는다
+function shuffleParticipants() {
+  state.participants = [...state.participants].sort(() => Math.random() - 0.5);
+  state.swappingIndex = null;   // swap 모드도 함께 해제
+  renderParticipants();
+}
+
+function startSession() {
+  const inputs = document.querySelectorAll('#name-inputs input');
+  const names = Array.from(inputs)
+    .map(el => el.value.trim())
+    .filter(name => name.length > 0);
+
+  if (names.length < 2 || names.length > 9) {
+    showModal({
+      message: '참가자는 2명 이상 9명 이하여야 합니다.<br>지금: ' + names.length + '명',
+      primaryLabel: '알겠습니다'
+    });
+    return;
+  }
+  if (new Set(names).size !== names.length) {
+    showModal({
+      message: '닉네임이 중복됩니다.<br>다시 확인해 주세요.',
+      primaryLabel: '알겠습니다'
+    });
+    return;
+  }
+
+  state.participants = names;
+  showBoard();
+}
+
+
+/* =========================================================
+   메인 보드 — 카드 뽑기 + 진행
+   ========================================================= */
+function showBoard() {
+  document.getElementById('setup').hidden = true;
+  document.getElementById('board').hidden = false;
+  document.getElementById('participant-controls').hidden = false;
+  document.getElementById('participants').hidden = false;
+  document.getElementById('actions').hidden = false;
+  document.getElementById('log').hidden = false;
+
+  // 첫 참가자를 발표자로 자동 활성화 — 호스트가 첫 클릭을 하지 않아도 바로 시작
+  state.activeParticipant = state.participants[0];
+
+  renderParticipants();
+  renderSpotlight();
+}
+
+function renderParticipants() {
+  const nav = document.getElementById('participants');
+  nav.innerHTML = state.participants.map((name, index) => {
+    const isActive = name === state.activeParticipant;
+    const hasPlayed = state.playedInRound.has(name);
+    const isSwapping = state.swappingIndex === index;
+    const cls = ['participant'];
+    if (isActive) cls.push('active');
+    if (hasPlayed) cls.push('played');
+    if (isSwapping) cls.push('swapping');
+    return `
+      <button class="${cls.join(' ')}"
+              onclick="selectParticipant('${name}', ${index})"
+              ondblclick="startSwap(${index})">
+        <span class="dot"></span>${name}
+      </button>
+    `;
+  }).join('');
+}
+
+function selectParticipant(name, index) {
+  // 순서 바꾸기 모드일 때: 두 사람의 위치를 swap
+  if (state.swappingIndex !== null) {
+    const a = state.swappingIndex;
+    const b = index;
+    if (a !== b) {
+      [state.participants[a], state.participants[b]] = [state.participants[b], state.participants[a]];
+    }
+    state.swappingIndex = null;
+    renderParticipants();
+    return;
+  }
+
+  // 일반 모드: 이미 이번 라운드에 답한 사람은 선택 불가
+  if (state.playedInRound.has(name)) return;
+
+  state.activeParticipant = name;
+  state.currentCard = null;   // 가운데 카드 비움 (다음 차례 시작)
+  renderParticipants();
+  renderSpotlight();
+}
+
+// 닉네임 더블클릭 — 순서 바꾸기 모드 진입 (또는 해제)
+function startSwap(index) {
+  if (state.swappingIndex === index) {
+    state.swappingIndex = null;   // 같은 사람 다시 더블클릭 → 해제
+  } else {
+    state.swappingIndex = index;
+  }
+  renderParticipants();
+}
+
+// 실제로 카드 한 장을 뽑아 가운데에 펼친다
+function actuallyDrawCard(type) {
+  const available = state.cards.filter(
+    c => c.type === type && !state.usedCards.has(c.id)
+  );
+  if (available.length === 0) {
+    showModal({
+      message: '해당 종류의 카드가 모두 뽑혔습니다.',
+      primaryLabel: '알겠습니다'
+    });
+    return;
+  }
+
+  const card = available[Math.floor(Math.random() * available.length)];
+  state.currentCard = card;
+  state.usedCards.add(card.id);
+
+  // 라운드 기록 — 다음 단계에 Firebase로 저장될 형태
+  state.rounds.push({
+    participant: state.activeParticipant,
+    cardId: card.id,
+    cardType: card.type,
+    round: state.currentRound,
+    timestamp: new Date().toISOString()
+  });
+  state.playedInRound.add(state.activeParticipant);
+  console.log('라운드 기록:', state.rounds[state.rounds.length - 1]);
+
+  // 모두 한 번씩 답하면 다음 라운드로 (한 바퀴 끝)
+  if (state.playedInRound.size === state.participants.length) {
+    state.currentRound++;
+    state.playedInRound = new Set();
+  }
+
+  renderSpotlight();
+  renderCounts();
+  renderParticipants();  // played 상태 갱신
+  renderLog();
+}
+
+// 더미를 클릭했을 때 진입점
+function drawCard(type) {
+  if (!state.activeParticipant) {
+    showModal({
+      message: '먼저 발표자(닉네임)를 선택해 주세요.',
+      primaryLabel: '알겠습니다'
+    });
+    return;
+  }
+
+  if (state.currentCard) {
+    // 이미 카드가 펼쳐져 있을 때 — 디폴트는 '발표자 바꾸기'
+    showModal({
+      message: '이미 카드가 펼쳐져 있습니다.<br>다음으로 어떻게 갈까요?',
+      primaryLabel: '발표자 바꾸기',
+      secondaryLabel: '같은 분이 새로 뽑기',
+      onPrimary: () => {
+        // 발표자 해제 + 카드 비움. 호스트가 닉네임 행에서 다음 사람을 클릭.
+        state.activeParticipant = null;
+        state.currentCard = null;
+        renderParticipants();
+        renderSpotlight();
+      },
+      onSecondary: () => {
+        actuallyDrawCard(type);
+      }
+    });
+    return;
+  }
+
+  actuallyDrawCard(type);
+}
+
+// 현재 발표자 다음 순서의 미답자를 찾아 반환 (없으면 null)
+function findNextParticipant() {
+  if (!state.activeParticipant) return null;
+  const currentIdx = state.participants.indexOf(state.activeParticipant);
+  if (currentIdx === -1) return null;
+  for (let i = 1; i <= state.participants.length; i++) {
+    const idx = (currentIdx + i) % state.participants.length;
+    const candidate = state.participants[idx];
+    if (!state.playedInRound.has(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+// 가운데 카드 더블클릭 — 다음 차례로 자연스럽게 넘어감
+function nextTurn() {
+  const next = findNextParticipant();
+  state.currentCard = null;
+  state.activeParticipant = next;  // null이면 발표자 비활성 (라운드 끝)
+  renderParticipants();
+  renderSpotlight();
+}
+
+function renderSpotlight() {
+  const spot = document.getElementById('spotlight');
+
+  if (!state.currentCard) {
+    const message = state.activeParticipant
+      ? `${state.activeParticipant}님의 차례입니다<br>긍정과 부정, 어느 쪽을 펼치시겠어요?`
+      : '플레이어 순서를 정한 후에<br>긍정/부정 카드 중 한쪽을 선택해 주세요';
+    spot.innerHTML = `<div class="empty">${message}</div>`;
+    return;
+  }
+
+  const c = state.currentCard;
+  const typeLabel = c.type === 'positive' ? 'OK' : 'Not OK';
+  spot.innerHTML = `
+    <div class="card card-${c.color}" ondblclick="nextTurn()">
+      <div class="card-top">
+        <span class="q-open">"</span>
+        <span class="q-close">"</span>
+        <span class="hamyeon">하면</span>
+      </div>
+      <div class="card-bottom">
+        <span class="response">${c.response}</span>
+      </div>
+    </div>
+    <div class="card-meta">${state.activeParticipant} · ${typeLabel}</div>
+    <div class="card-hint">카드 두 번 누르면 다음 차례</div>
+  `;
+}
+
+function renderCounts() {
+  const posLeft = state.cards.filter(c => c.type === 'positive' && !state.usedCards.has(c.id)).length;
+  const negLeft = state.cards.filter(c => c.type === 'negative' && !state.usedCards.has(c.id)).length;
+  document.getElementById('positive-count').textContent = posLeft + '장 남음';
+  document.getElementById('negative-count').textContent = negLeft + '장 남음';
+
+  document.querySelector('.pile.positive').classList.toggle('disabled', posLeft === 0);
+  document.querySelector('.pile.negative').classList.toggle('disabled', negLeft === 0);
+}
+
+function renderLog() {
+  const log = document.getElementById('log');
+
+  // 가장 최근에 진행 중인 라운드 (아직 한 바퀴 안 돈 경우 currentRound,
+  //   바퀴를 막 완료한 경우엔 직전 라운드의 기록을 보여줘야 자연스럽다)
+  const displayRound = state.playedInRound.size > 0
+    ? state.currentRound
+    : state.currentRound - 1;
+
+  if (displayRound < 1 || state.rounds.length === 0) {
+    log.innerHTML = '';
+    return;
+  }
+
+  const entries = state.rounds.filter(r => r.round === displayRound);
+  const trail = entries
+    .map(r => {
+      const mark = r.cardType === 'positive' ? '+' : '-';
+      return `<span class="log-item">${r.participant}(${mark})</span>`;
+    })
+    .join(' → ');
+
+  log.innerHTML = `${displayRound}라운드 · ${trail}`;
+}
+
+
+/* =========================================================
+   대화 끝내기 → Blank Game 시작
+   ========================================================= */
+function endTalk() {
+  if (state.rounds.length === 0) {
+    showModal({
+      message: '아직 한 라운드도 진행되지 않았습니다.<br>대화를 시작한 뒤 끝낼 수 있어요.',
+      primaryLabel: '알겠습니다'
+    });
+    return;
+  }
+
+  showModal({
+    message:
+      '대화를 끝내고 <strong>Blank Game</strong>으로 갈까요?<br><br>' +
+      '<small style="color:#888;">지금까지 답변된 카드들이 다시 뒤섞여,<br>' +
+      '누가 어떤 답을 했는지 맞추는 게임이 시작됩니다.</small>',
+    primaryLabel: '아직 더 진행',
+    secondaryLabel: '게임 시작 →',
+    onSecondary: () => {
+      startGame();
+    }
+  });
+}
+
+
+/* =========================================================
+   Blank Game — 기억하기 게임
+   ========================================================= */
+function startGame() {
+  // Blank Talk의 라운드 기록을 셔플해서 게임 카드로 만듦
+  state.gameDeck = [...state.rounds].sort(() => Math.random() - 0.5);
+  state.gameIndex = 0;
+  state.gameScores = {};
+  state.participants.forEach(p => state.gameScores[p] = 0);
+  state.eliminatedForCard = new Set();
+  state.selectedGuesser = null;
+  state.gameStarted = false;   // 대기 카드부터 시작
+  state.mode = 'game';
+  showGameBoard();
+}
+
+// 대기 카드를 더블클릭하면 진짜 게임 시작
+function beginGame() {
+  state.gameStarted = true;
+  renderGameCard();
+  renderGameParticipants();
+}
+
+function showGameBoard() {
+  // Blank Talk 영역 모두 숨김
+  document.getElementById('board').hidden = true;
+  document.getElementById('participant-controls').hidden = true;
+  document.getElementById('participants').hidden = true;
+  document.getElementById('actions').hidden = true;
+  document.getElementById('log').hidden = true;
+
+  // Blank Game 영역 표시
+  document.getElementById('game-board').hidden = false;
+  document.getElementById('game-participants').hidden = false;
+  document.getElementById('game-actions').hidden = false;
+  document.getElementById('game-status').hidden = false;
+
+  renderGameCard();
+  renderGameParticipants();
+  renderGameStatus();
+}
+
+// 호스트의 닉네임 클릭 — 1단계(도전자), 2단계(답한사람 지목)
+function selectGuesser(name) {
+  if (!state.gameStarted) return;
+  if (state.contentCheckStage) return;   // 내용 확인 단계엔 닉네임 클릭 무시
+
+  if (!state.selectedGuesser) {
+    // 1단계: 도전자 — 박탈된 사람은 도전자가 될 수 없음
+    if (state.eliminatedForCard.has(name)) return;
+    state.selectedGuesser = name;
+    renderGameParticipants();
+    renderGuessArea();
+    return;
+  }
+
+  // 2단계: 답한사람 지목 — 박탈된 사람도, 도전자 자신도 지목 대상이 될 수 있음
+  const round = state.gameDeck[state.gameIndex];
+  const actualAnswerer = round.participant;
+  state.guessedAnswer = name;
+
+  if (name === actualAnswerer) {
+    // 사람 맞춤 → 즉시 +1점 → 내용 확인 단계로
+    state.gameScores[state.selectedGuesser] = (state.gameScores[state.selectedGuesser] || 0) + 1;
+    state.contentCheckStage = true;
+    renderGameParticipants();
+    renderGuessArea();
+  } else {
+    // 사람 틀림 → 도전자 박탈
+    eliminateAndContinue(`<strong>${name}</strong>님이라 답했지만 사람을 잘못 맞췄어요`);
+  }
+}
+
+// 내용 확인 단계의 정답/오답 버튼
+function judgeContent(isCorrect) {
+  const round = state.gameDeck[state.gameIndex];
+  const actualAnswerer = round.participant;
+  const guesser = state.selectedGuesser;
+
+  if (isCorrect) {
+    // 사람도 맞고 내용도 맞음 — 추가 +1 (총 +2)
+    state.gameScores[guesser] = (state.gameScores[guesser] || 0) + 1;
+    showModal({
+      message:
+        '<strong style="color:#E26887;font-size:18px;">완벽 정답!</strong><br><br>' +
+        `<strong>${guesser}</strong>님이 <strong>${actualAnswerer}</strong>님의 답을 모두 기억했어요.<br>` +
+        `<small style="color:#888;">사람 +1, 내용 +1 = ${guesser}님 +2점</small>`,
+      primaryLabel: '다음 카드 →',
+      onPrimary: () => goToNextGameCard()
+    });
+  } else {
+    // 사람은 맞췄지만 내용을 틀림 → 도전자 박탈 (사람 +1점은 유지)
+    eliminateAndContinue('답한 내용을 잘못 기억했어요. (사람 +1점은 유지)');
+  }
+}
+
+// 도전자를 박탈하고 다음 도전자 받을 수 있게 흐름 리셋
+// reason: 박탈 사유 (HTML 가능)
+function eliminateAndContinue(reason) {
+  const guesser = state.selectedGuesser;
+  const wasGuesser = guesser;
+  state.eliminatedForCard.add(guesser);
+  state.selectedGuesser = null;
+  state.guessedAnswer = null;
+  state.contentCheckStage = false;
+
+  const remaining = state.participants.filter(p => !state.eliminatedForCard.has(p));
+  const round = state.gameDeck[state.gameIndex];
+  const actualAnswerer = round.participant;
+
+  if (remaining.length === 0) {
+    showModal({
+      message:
+        '아무도 못 맞췄네요.<br><br>' +
+        `이 카드는 <strong>${actualAnswerer}</strong>님의 답이었습니다.`,
+      primaryLabel: '다음 카드 →',
+      onPrimary: () => goToNextGameCard()
+    });
+  } else {
+    renderGameParticipants();
+    renderGuessArea();
+    showInlineAlert(
+      `<strong>오답</strong> · ${wasGuesser}님은 ${reason}. 다른 분 도전!`,
+      3000
+    );
+  }
+}
+
+function goToNextGameCard() {
+  state.gameIndex++;
+  state.eliminatedForCard = new Set();
+  state.selectedGuesser = null;
+  state.guessedAnswer = null;
+  state.contentCheckStage = false;
+  renderGameCard();
+  renderGameParticipants();
+  renderGameStatus();
+}
+
+function renderGameCard() {
+  const area = document.getElementById('game-card-area');
+
+  // 게임이 시작되기 전: 대기 카드
+  if (!state.gameStarted) {
+    area.innerHTML = `
+      <div class="game-card waiting-card" ondblclick="beginGame()">
+        <div class="card-top">
+          <span class="waiting-text-top">두 번 터치하면</span>
+        </div>
+        <div class="card-bottom">
+          <span class="waiting-text-bottom">게임이 시작돼요</span>
+        </div>
+      </div>
+      <div class="waiting-hint">카드를 두 번 누르세요</div>
+    `;
+    document.getElementById('game-guess-area').innerHTML = '';
+    return;
+  }
+
+  // 모든 카드 끝남 → 결과
+  if (state.gameIndex >= state.gameDeck.length) {
+    showGameResult();
+    return;
+  }
+
+  const round = state.gameDeck[state.gameIndex];
+  const card = state.cards.find(c => c.id === round.cardId);
+  const typeLabel = card.type === 'positive' ? 'OK' : 'Not OK';
+
+  area.innerHTML = `
+    <div class="game-card card-${card.color}">
+      <div class="card-top">
+        <span class="q-open">"</span>
+        <span class="q-close">"</span>
+        <span class="hamyeon">하면</span>
+      </div>
+      <div class="card-bottom">
+        <span class="response">${card.response}</span>
+      </div>
+    </div>
+    <div class="game-card-type">${typeLabel}</div>
+  `;
+
+  renderGuessArea();
+}
+
+function renderGuessArea() {
+  const area = document.getElementById('game-guess-area');
+
+  // 3단계: 사람은 맞췄고, 답한 내용을 호스트가 판정하는 단계
+  if (state.contentCheckStage) {
+    const round = state.gameDeck[state.gameIndex];
+    const actualAnswerer = round.participant;
+    area.innerHTML = `
+      <div class="guess-prompt">
+        사람은 맞았어요! 🎉<br>
+        <strong>${actualAnswerer}</strong>님이 뭐라고 답했나요?
+      </div>
+      <div class="guess-status">
+        <div class="status-row">
+          <span class="label">도전자</span>
+          <span class="value highlight">${state.selectedGuesser}</span>
+        </div>
+        <div class="status-row">
+          <span class="label">답한사람</span>
+          <span class="value highlight">${state.guessedAnswer}</span>
+        </div>
+      </div>
+      <div class="content-buttons">
+        <button class="wrong" onclick="judgeContent(false)">오답</button>
+        <button class="correct" onclick="judgeContent(true)">정답</button>
+      </div>
+    `;
+    return;
+  }
+
+  if (!state.selectedGuesser) {
+    // 1단계: 도전자를 고르기
+    area.innerHTML = `
+      <div class="guess-prompt">이 카드에 답했던 사람은 누구일까요?</div>
+      <div class="guess-status">
+        <div class="status-row">
+          <span class="label">도전자</span>
+          <span class="value empty">─</span>
+        </div>
+        <div class="status-row">
+          <span class="label">답한사람</span>
+          <span class="value empty">─</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // 2단계: 도전자가 답한사람을 지목하기
+  area.innerHTML = `
+    <div class="guess-prompt"><strong>${state.selectedGuesser}</strong>님이 답한 사람을 클릭해 주세요</div>
+    <div class="guess-status">
+      <div class="status-row">
+        <span class="label">도전자</span>
+        <span class="value highlight">${state.selectedGuesser}</span>
+      </div>
+      <div class="status-row">
+        <span class="label">답한사람</span>
+        <span class="value empty">─</span>
+      </div>
+    </div>
+  `;
+}
+
+// 오답 등 짧은 안내를 인라인 알림으로 표시 — 모달이 클릭을 막지 않도록
+function showInlineAlert(message, duration = 2500) {
+  const area = document.getElementById('game-guess-area');
+  const existing = area.querySelector('.inline-alert');
+  if (existing) existing.remove();
+
+  const alertBox = document.createElement('div');
+  alertBox.className = 'inline-alert';
+  alertBox.innerHTML = message;
+  area.appendChild(alertBox);
+
+  setTimeout(() => {
+    if (alertBox.parentNode) alertBox.remove();
+  }, duration);
+}
+
+function renderGameParticipants() {
+  const nav = document.getElementById('game-participants');
+  // 2단계 = 도전자가 정해진 상태에서 답한사람 지목 중
+  // 이때는 박탈된 사람도 '지목 대상'이 될 수 있으므로 흐리지 않음
+  const isStep2 = state.selectedGuesser && !state.contentCheckStage;
+
+  nav.innerHTML = state.participants.map(name => {
+    const score = state.gameScores[name] || 0;
+    const isSelected = name === state.selectedGuesser;
+    const isEliminated = state.eliminatedForCard.has(name);
+    const cls = ['player'];
+    if (isSelected) cls.push('selected');
+    if (isEliminated && !isStep2) cls.push('eliminated');
+    return `
+      <button class="${cls.join(' ')}" onclick="selectGuesser('${name}')">
+        ${name}<span class="score">${score}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function renderGameStatus() {
+  const status = document.getElementById('game-status');
+  if (!state.gameStarted) {
+    status.innerHTML = '';
+    return;
+  }
+  status.innerHTML = `${state.gameIndex + 1} / ${state.gameDeck.length} 카드`;
+}
+
+function showGameResult() {
+  state.mode = 'game-result';
+
+  // 타이틀을 결과 화면용으로 바꿈
+  document.querySelector('#game-board .game-title').textContent = '오늘의 우승자는?';
+
+  const sorted = Object.entries(state.gameScores)
+    .sort(([,a], [,b]) => b - a);
+  const topScore = sorted[0] ? sorted[0][1] : 0;
+
+  const area = document.getElementById('game-card-area');
+  area.innerHTML = `
+    <div id="game-result-area">
+      <div class="winner">🎉 ${sorted.filter(([,s]) => s === topScore).map(([n]) => n).join(' · ')} 🎉</div>
+      <div class="scores">
+        ${sorted.map(([name, score]) => `
+          <div class="score-row ${score === topScore ? 'top' : ''}">
+            <span>${name}</span>
+            <span>${score}점</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="actions">
+        <button class="restart-button" onclick="restartAll()">게임 다시 하기</button>
+        <a href="https://smartstore.naver.com/tlpstore/products/11071757182"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="buy-button">
+          블랭크톡 카드 구입하러 가기 →
+        </a>
+      </div>
+    </div>
+  `;
+  document.getElementById('game-guess-area').innerHTML = '';
+  document.getElementById('game-participants').hidden = true;
+  document.getElementById('game-status').hidden = true;
+  document.getElementById('game-actions').hidden = true;   // 게임 끝내기 버튼 숨김
+}
+
+
+/* =========================================================
+   처음으로 — 새 세션 시작
+   ========================================================= */
+function restartAll() {
+  // 상태 리셋
+  state.participants = [];
+  state.activeParticipant = null;
+  state.currentCard = null;
+  state.usedCards = new Set();
+  state.rounds = [];
+  state.currentRound = 1;
+  state.playedInRound = new Set();
+  state.swappingIndex = null;
+  state.mode = 'talk';
+  state.gameStarted = false;
+  state.gameDeck = [];
+  state.gameIndex = 0;
+  state.gameScores = {};
+  state.eliminatedForCard = new Set();
+  state.selectedGuesser = null;
+  state.guessedAnswer = null;
+  state.contentCheckStage = false;
+  state.sessionId = 's_' + Date.now();
+
+  // 게임 영역 모두 숨김
+  document.getElementById('game-board').hidden = true;
+  document.getElementById('game-participants').hidden = true;
+  document.getElementById('game-actions').hidden = true;
+  document.getElementById('game-status').hidden = true;
+
+  // Blank Talk 영역도 숨김 (다시 시작이므로)
+  document.getElementById('board').hidden = true;
+  document.getElementById('participant-controls').hidden = true;
+  document.getElementById('participants').hidden = true;
+  document.getElementById('actions').hidden = true;
+  document.getElementById('log').hidden = true;
+
+  // setup 화면 복귀
+  document.getElementById('setup').hidden = false;
+
+  // 게임 타이틀 원복 — 다음 게임에서 정상 표시되도록
+  document.querySelector('#game-board .game-title').textContent = '이 답을 한 사람은 누구일까요?';
+
+  // 입력 행 초기화 — 빈 상태로 3개
+  document.getElementById('name-inputs').innerHTML = '';
+  for (let i = 0; i < 3; i++) addNameRow();
+
+  // 페이지 맨 위로
+  window.scrollTo(0, 0);
+}
+
+function endGame() {
+  showModal({
+    message: '정말 게임을 끝낼까요?<br><br><small style="color:#888;">지금 점수로 결과 화면이 표시됩니다.</small>',
+    primaryLabel: '아직 더',
+    secondaryLabel: '게임 끝내기',
+    onSecondary: () => showGameResult()
+  });
+}
+
+
+/* 시작 */
+init();
+</script>
+
+</body>
+</html>

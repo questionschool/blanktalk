@@ -1,0 +1,565 @@
+{
+  "version": "1.0",
+  "cards": [
+    {
+      "id": "P01",
+      "type": "positive",
+      "connector": "하면",
+      "response": "먼저 다가가요",
+      "color": "yellow"
+    },
+    {
+      "id": "P02",
+      "type": "positive",
+      "connector": "하면",
+      "response": "감동해요",
+      "color": "pink"
+    },
+    {
+      "id": "P03",
+      "type": "positive",
+      "connector": "하면",
+      "response": "다 용서해요",
+      "color": "mint"
+    },
+    {
+      "id": "P04",
+      "type": "positive",
+      "connector": "하면",
+      "response": "마음을 열어요",
+      "color": "coral"
+    },
+    {
+      "id": "P05",
+      "type": "positive",
+      "connector": "하면",
+      "response": "나를 보여줘요",
+      "color": "green"
+    },
+    {
+      "id": "P06",
+      "type": "positive",
+      "connector": "하면",
+      "response": "손을 내밀어요",
+      "color": "pink"
+    },
+    {
+      "id": "P07",
+      "type": "positive",
+      "connector": "하면",
+      "response": "솔직해져요",
+      "color": "mint"
+    },
+    {
+      "id": "P08",
+      "type": "positive",
+      "connector": "하면",
+      "response": "잘 협조해요",
+      "color": "coral"
+    },
+    {
+      "id": "P09",
+      "type": "positive",
+      "connector": "하면",
+      "response": "내 마음을 표현해요",
+      "color": "yellow"
+    },
+    {
+      "id": "P10",
+      "type": "positive",
+      "connector": "하면",
+      "response": "밥을 사요",
+      "color": "green"
+    },
+    {
+      "id": "P11",
+      "type": "positive",
+      "connector": "하면",
+      "response": "즐거워해요",
+      "color": "mint"
+    },
+    {
+      "id": "P12",
+      "type": "positive",
+      "connector": "하면",
+      "response": "마음을 털어놓아요",
+      "color": "pink"
+    },
+    {
+      "id": "P13",
+      "type": "positive",
+      "connector": "하면",
+      "response": "기가 살아요",
+      "color": "mint"
+    },
+    {
+      "id": "P14",
+      "type": "positive",
+      "connector": "하면",
+      "response": "꺄르르 웃어요",
+      "color": "yellow"
+    },
+    {
+      "id": "P15",
+      "type": "positive",
+      "connector": "하면",
+      "response": "기분이 좋아져요",
+      "color": "green"
+    },
+    {
+      "id": "P16",
+      "type": "positive",
+      "connector": "하면",
+      "response": "자신감이 생겨요",
+      "color": "coral"
+    },
+    {
+      "id": "P17",
+      "type": "positive",
+      "connector": "하면",
+      "response": "마음이 누그러져요",
+      "color": "pink"
+    },
+    {
+      "id": "P18",
+      "type": "positive",
+      "connector": "하면",
+      "response": "부드러워져요",
+      "color": "mint"
+    },
+    {
+      "id": "P19",
+      "type": "positive",
+      "connector": "하면",
+      "response": "반해요",
+      "color": "yellow"
+    },
+    {
+      "id": "P20",
+      "type": "positive",
+      "connector": "하면",
+      "response": "잘 도와줘요",
+      "color": "coral"
+    },
+    {
+      "id": "P21",
+      "type": "positive",
+      "connector": "하면",
+      "response": "살아나요",
+      "color": "green"
+    },
+    {
+      "id": "P22",
+      "type": "positive",
+      "connector": "하면",
+      "response": "흥이 나요",
+      "color": "pink"
+    },
+    {
+      "id": "P23",
+      "type": "positive",
+      "connector": "하면",
+      "response": "친절해져요",
+      "color": "yellow"
+    },
+    {
+      "id": "P24",
+      "type": "positive",
+      "connector": "하면",
+      "response": "고마워해요",
+      "color": "mint"
+    },
+    {
+      "id": "P25",
+      "type": "positive",
+      "connector": "하면",
+      "response": "눈빛이 따뜻해져요",
+      "color": "coral"
+    },
+    {
+      "id": "P26",
+      "type": "positive",
+      "connector": "하면",
+      "response": "적극적이 돼요",
+      "color": "green"
+    },
+    {
+      "id": "P27",
+      "type": "positive",
+      "connector": "하면",
+      "response": "같이 하고 싶어요",
+      "color": "yellow"
+    },
+    {
+      "id": "P28",
+      "type": "positive",
+      "connector": "하면",
+      "response": "다정해져요",
+      "color": "pink"
+    },
+    {
+      "id": "P29",
+      "type": "positive",
+      "connector": "하면",
+      "response": "믿음이 가요",
+      "color": "coral"
+    },
+    {
+      "id": "P30",
+      "type": "positive",
+      "connector": "하면",
+      "response": "편안해져요",
+      "color": "mint"
+    },
+    {
+      "id": "P31",
+      "type": "positive",
+      "connector": "하면",
+      "response": "열심히 해요",
+      "color": "green"
+    },
+    {
+      "id": "P32",
+      "type": "positive",
+      "connector": "하면",
+      "response": "친밀감을 느껴요",
+      "color": "pink"
+    },
+    {
+      "id": "P33",
+      "type": "positive",
+      "connector": "하면",
+      "response": "사랑받는다고 느껴요",
+      "color": "yellow"
+    },
+    {
+      "id": "P34",
+      "type": "positive",
+      "connector": "하면",
+      "response": "위안을 받아요",
+      "color": "coral"
+    },
+    {
+      "id": "P35",
+      "type": "positive",
+      "connector": "하면",
+      "response": "다 퍼줘요",
+      "color": "mint"
+    },
+    {
+      "id": "P36",
+      "type": "positive",
+      "connector": "하면",
+      "response": "긴장이 풀려요",
+      "color": "green"
+    },
+    {
+      "id": "P37",
+      "type": "positive",
+      "connector": "하면",
+      "response": "호감이 가요",
+      "color": "coral"
+    },
+    {
+      "id": "P38",
+      "type": "positive",
+      "connector": "하면",
+      "response": "신뢰가 높아져요",
+      "color": "yellow"
+    },
+    {
+      "id": "P39",
+      "type": "positive",
+      "connector": "하면",
+      "response": "큰 힘을 얻어요",
+      "color": "pink"
+    },
+    {
+      "id": "P40",
+      "type": "positive",
+      "connector": "하면",
+      "response": "말이 많아져요",
+      "color": "green"
+    },
+    {
+      "id": "N01",
+      "type": "negative",
+      "connector": "하면",
+      "response": "진이 빠져요",
+      "color": "pink"
+    },
+    {
+      "id": "N02",
+      "type": "negative",
+      "connector": "하면",
+      "response": "실망해요",
+      "color": "green"
+    },
+    {
+      "id": "N03",
+      "type": "negative",
+      "connector": "하면",
+      "response": "섭섭해요",
+      "color": "yellow"
+    },
+    {
+      "id": "N04",
+      "type": "negative",
+      "connector": "하면",
+      "response": "화를 내요",
+      "color": "coral"
+    },
+    {
+      "id": "N05",
+      "type": "negative",
+      "connector": "하면",
+      "response": "긴장해요",
+      "color": "pink"
+    },
+    {
+      "id": "N06",
+      "type": "negative",
+      "connector": "하면",
+      "response": "오해해요",
+      "color": "mint"
+    },
+    {
+      "id": "N07",
+      "type": "negative",
+      "connector": "하면",
+      "response": "당황해요",
+      "color": "green"
+    },
+    {
+      "id": "N08",
+      "type": "negative",
+      "connector": "하면",
+      "response": "부정적이 돼요",
+      "color": "yellow"
+    },
+    {
+      "id": "N09",
+      "type": "negative",
+      "connector": "하면",
+      "response": "버럭해요",
+      "color": "coral"
+    },
+    {
+      "id": "N10",
+      "type": "negative",
+      "connector": "하면",
+      "response": "티격태격해요",
+      "color": "mint"
+    },
+    {
+      "id": "N11",
+      "type": "negative",
+      "connector": "하면",
+      "response": "상처받아요",
+      "color": "green"
+    },
+    {
+      "id": "N12",
+      "type": "negative",
+      "connector": "하면",
+      "response": "불쾌해요",
+      "color": "coral"
+    },
+    {
+      "id": "N13",
+      "type": "negative",
+      "connector": "하면",
+      "response": "마음을 닫아요",
+      "color": "pink"
+    },
+    {
+      "id": "N14",
+      "type": "negative",
+      "connector": "하면",
+      "response": "멘탈이 흔들려요",
+      "color": "yellow"
+    },
+    {
+      "id": "N15",
+      "type": "negative",
+      "connector": "하면",
+      "response": "눈치 봐요",
+      "color": "green"
+    },
+    {
+      "id": "N16",
+      "type": "negative",
+      "connector": "하면",
+      "response": "표정이 어두워져요",
+      "color": "mint"
+    },
+    {
+      "id": "N17",
+      "type": "negative",
+      "connector": "하면",
+      "response": "거슬려요",
+      "color": "coral"
+    },
+    {
+      "id": "N18",
+      "type": "negative",
+      "connector": "하면",
+      "response": "냉담해져요",
+      "color": "pink"
+    },
+    {
+      "id": "N19",
+      "type": "negative",
+      "connector": "하면",
+      "response": "예민해져요",
+      "color": "yellow"
+    },
+    {
+      "id": "N20",
+      "type": "negative",
+      "connector": "하면",
+      "response": "슬슬 피해요",
+      "color": "pink"
+    },
+    {
+      "id": "N21",
+      "type": "negative",
+      "connector": "하면",
+      "response": "기분이 상해요",
+      "color": "yellow"
+    },
+    {
+      "id": "N22",
+      "type": "negative",
+      "connector": "하면",
+      "response": "기죽어요",
+      "color": "green"
+    },
+    {
+      "id": "N23",
+      "type": "negative",
+      "connector": "하면",
+      "response": "의욕을 잃어요",
+      "color": "mint"
+    },
+    {
+      "id": "N24",
+      "type": "negative",
+      "connector": "하면",
+      "response": "시큰둥해져요",
+      "color": "coral"
+    },
+    {
+      "id": "N25",
+      "type": "negative",
+      "connector": "하면",
+      "response": "참기 힘들어요",
+      "color": "pink"
+    },
+    {
+      "id": "N26",
+      "type": "negative",
+      "connector": "하면",
+      "response": "삐딱해져요",
+      "color": "green"
+    },
+    {
+      "id": "N27",
+      "type": "negative",
+      "connector": "하면",
+      "response": "자리를 피해요",
+      "color": "mint"
+    },
+    {
+      "id": "N28",
+      "type": "negative",
+      "connector": "하면",
+      "response": "압박감을 느껴요",
+      "color": "yellow"
+    },
+    {
+      "id": "N29",
+      "type": "negative",
+      "connector": "하면",
+      "response": "입을 닫아요",
+      "color": "coral"
+    },
+    {
+      "id": "N30",
+      "type": "negative",
+      "connector": "하면",
+      "response": "속 터져요",
+      "color": "green"
+    },
+    {
+      "id": "N31",
+      "type": "negative",
+      "connector": "하면",
+      "response": "신뢰가 깨져요",
+      "color": "pink"
+    },
+    {
+      "id": "N32",
+      "type": "negative",
+      "connector": "하면",
+      "response": "손절해요",
+      "color": "mint"
+    },
+    {
+      "id": "N33",
+      "type": "negative",
+      "connector": "하면",
+      "response": "정색해요",
+      "color": "coral"
+    },
+    {
+      "id": "N34",
+      "type": "negative",
+      "connector": "하면",
+      "response": "뒤로 물러서요",
+      "color": "yellow"
+    },
+    {
+      "id": "N35",
+      "type": "negative",
+      "connector": "하면",
+      "response": "열받아요",
+      "color": "pink"
+    },
+    {
+      "id": "N36",
+      "type": "negative",
+      "connector": "하면",
+      "response": "경계해요",
+      "color": "green"
+    },
+    {
+      "id": "N37",
+      "type": "negative",
+      "connector": "하면",
+      "response": "서러워요",
+      "color": "mint"
+    },
+    {
+      "id": "N38",
+      "type": "negative",
+      "connector": "하면",
+      "response": "짜증 내요",
+      "color": "yellow"
+    },
+    {
+      "id": "N39",
+      "type": "negative",
+      "connector": "하면",
+      "response": "함께하기 싫어요",
+      "color": "coral"
+    },
+    {
+      "id": "N40",
+      "type": "negative",
+      "connector": "하면",
+      "response": "불친절해져요",
+      "color": "mint"
+    }
+  ]
+}
