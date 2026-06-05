@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blank Talk — 카드 한 장</title>
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blank Talk">
+<meta property="og:description" content="빈칸을 채우는 대화, 마음을 여는 순간">
+<meta property="og:image" content="og-image.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #FAF7F0;
+  color: #2A2A2A;
+  min-height: 100vh;
+  padding: 20px;
+  touch-action: manipulation;
+  text-align: center;
+}
+
+header {
+  margin-bottom: 16px;
+}
+header .logo {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 38px;
+  color: #D97640;
+}
+header .subtitle {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+}
+
+#card-area {
+  margin-top: 8px;
+}
+
+.card {
+  width: 320px;
+  aspect-ratio: 13 / 21;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  margin: 0 auto;
+}
+.card:hover { transform: translateY(-3px); }
+
+.card.back-positive { background: url('back-positive.jpg') center/cover; }
+.card.back-negative { background: url('back-negative.jpg') center/cover; }
+
+.card.front {
+  display: flex;
+  flex-direction: column;
+  animation: cardIn 0.35s ease-out;
+}
+.card.front .card-top {
+  flex: 1;
+  background: #FBF4D8;
+  position: relative;
+}
+.card.front .q-open,
+.card.front .q-close,
+.card.front .hamyeon {
+  font-family: 'Nanum Pen Script', cursive;
+  color: #D97640;
+  position: absolute;
+}
+.card.front .q-open  { top: 16px;    left: 22px;   font-size: 38px; }
+.card.front .q-close { bottom: 60px; right: 24px;  font-size: 38px; }
+.card.front .hamyeon { bottom: 16px; right: 22px;  font-size: 22px; }
+.card.front .card-bottom {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.card.front .response {
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 32px;
+  color: #2A2A2A;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.card-yellow .card-bottom { background: #ECD850; }
+.card-pink   .card-bottom { background: #E26887; }
+.card-mint   .card-bottom { background: #88DBC2; }
+.card-coral  .card-bottom { background: #EC826B; }
+.card-green  .card-bottom { background: #ABD971; }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.hint {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #BBB;
+}
+
+/* 모바일 — 카드 화면 가득, 헤더 바로 아래에 붙음 */
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  header { margin-bottom: 4px; }
+  header .logo { font-size: 30px; }
+  header .subtitle { font-size: 13px; }
+
+  #card-area { margin-top: 4px; }
+
+  .card { width: 92vw; max-width: 460px; }
+  .card.front .q-open,
+  .card.front .q-close { font-size: 48px; }
+  .card.front .q-open  { top: 18px;    left: 26px; }
+  .card.front .q-close { bottom: 70px; right: 26px; }
+  .card.front .hamyeon { font-size: 28px; bottom: 20px; right: 26px; }
+  .card.front .response { font-size: 42px; }
+  .card.front .card-bottom { padding: 20px; }
+  .hint { font-size: 14px; margin-top: 12px; }
+}
+
+@media (max-width: 480px) {
+  .card { width: 92vw; }
+  .card.front .response { font-size: 38px; }
+  .card.front .q-open,
+  .card.front .q-close { font-size: 44px; }
+  .card.front .hamyeon { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Blank Talk</div>
+  <div class="subtitle">빈칸을 채우는 대화, 마음을 여는 순간</div>
+</header>
+
+<div id="card-area">
+  <div id="card" class="card" onclick="toggleCard()"></div>
+  <div class="hint" id="hint">카드를 눌러 펼쳐 보세요</div>
+</div>
+
+<script>
+const state = {
+  cards: null,
+  nextCard: null,
+  isFlipped: false
+};
+
+async function init() {
+  try {
+    const res = await fetch('cards.json');
+    const data = await res.json();
+    state.cards = data.cards;
+    pickNextCard();
+    renderCard();
+  } catch (err) {
+    document.getElementById('card-area').innerHTML =
+      '<div style="color:#888;text-align:center;">cards.json을 불러오지 못했습니다.</div>';
+  }
+}
+
+function pickNextCard() {
+  state.nextCard = state.cards[Math.floor(Math.random() * state.cards.length)];
+}
+
+function toggleCard() {
+  if (!state.nextCard) return;
+  if (state.isFlipped) {
+    state.isFlipped = false;
+    pickNextCard();
+  } else {
+    state.isFlipped = true;
+  }
+  renderCard();
+}
+
+function renderCard() {
+  const card = document.getElementById('card');
+  const hint = document.getElementById('hint');
+  const c = state.nextCard;
+  if (!c) return;
+
+  if (!state.isFlipped) {
+    card.className = 'card back-' + c.type;
+    card.innerHTML = '';
+    hint.textContent = '카드를 눌러 펼쳐 보세요';
+  } else {
+    card.className = 'card front card-' + c.color;
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="q-open">"</span>
+        <span class="q-close">"</span>
+        <span class="hamyeon">하면</span>
+      </div>
+      <div class="card-bottom">
+        <span class="response">${c.response}</span>
+      </div>
+    `;
+    hint.textContent = '다시 누르면 다음 카드';
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>

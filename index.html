@@ -251,6 +251,40 @@ header .subtitle {
   color: #BBB;
 }
 
+/* 카드 아래 두 버튼: 이전 화면 / 다음 차례 (또는 게임 시작) */
+.spotlight-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.spotlight-actions button {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-family: inherit;
+  border-radius: 24px;
+  cursor: pointer;
+  border: 0.5px solid #D5CFC0;
+  background: white;
+  color: #888;
+  transition: all 0.2s ease;
+}
+.spotlight-actions button:hover {
+  background: #F5F0E5;
+  border-color: #D97640;
+  color: #2A2A2A;
+}
+.spotlight-actions button.primary {
+  background: #D97640;
+  color: white;
+  border-color: #D97640;
+}
+.spotlight-actions button.primary:hover {
+  background: #C56830;
+  color: white;
+}
+
 /* 카드 색 매핑 (JSON의 color 라벨 → 실제 색) */
 .card-yellow .card-bottom { background: #ECD850; }
 .card-pink   .card-bottom { background: #E26887; }
@@ -1360,8 +1394,38 @@ function renderSpotlight() {
       </div>
     </div>
     <div class="card-meta">${state.activeParticipant} · ${typeLabel}</div>
-    <div class="card-hint">카드 두 번 누르면 다음 차례</div>
+    <div class="spotlight-actions">
+      <button onclick="cancelCard()">← 이전 화면</button>
+      <button class="primary" onclick="nextTurn()">다음 차례 →</button>
+    </div>
   `;
+}
+
+// 펼쳐진 카드를 '없던 일'로 — 실수로 더미를 눌렀을 때의 안전망
+function cancelCard() {
+  if (!state.currentCard) return;
+
+  // 마지막 라운드 기록 되돌리기
+  const last = state.rounds[state.rounds.length - 1];
+  if (last && last.cardId === state.currentCard.id) {
+    state.rounds.pop();
+    state.usedCards.delete(last.cardId);
+    state.playedInRound.delete(last.participant);
+
+    // 라운드 자동 증가가 이 카드 때문에 일어났다면 되돌림
+    if (last.round < state.currentRound) {
+      state.currentRound = last.round;
+      state.playedInRound = new Set(
+        state.rounds.filter(r => r.round === last.round).map(r => r.participant)
+      );
+    }
+  }
+
+  state.currentCard = null;
+  renderSpotlight();
+  renderCounts();
+  renderParticipants();
+  renderLog();
 }
 
 function renderCounts() {
@@ -1440,6 +1504,25 @@ function startGame() {
   state.gameStarted = false;   // 대기 카드부터 시작
   state.mode = 'game';
   showGameBoard();
+}
+
+// 대기 카드에서 다시 Blank Talk으로 돌아감
+function backToTalk() {
+  state.mode = 'talk';
+  state.gameStarted = false;
+
+  // 게임 영역 숨김
+  document.getElementById('game-board').hidden = true;
+  document.getElementById('game-participants').hidden = true;
+  document.getElementById('game-actions').hidden = true;
+  document.getElementById('game-status').hidden = true;
+
+  // Blank Talk 영역 다시 보이기
+  document.getElementById('board').hidden = false;
+  document.getElementById('participant-controls').hidden = false;
+  document.getElementById('participants').hidden = false;
+  document.getElementById('actions').hidden = false;
+  document.getElementById('log').hidden = false;
 }
 
 // 대기 카드를 더블클릭하면 진짜 게임 시작
@@ -1579,7 +1662,10 @@ function renderGameCard() {
           <span class="waiting-text-bottom">게임이 시작돼요</span>
         </div>
       </div>
-      <div class="waiting-hint">카드를 두 번 누르세요</div>
+      <div class="spotlight-actions">
+        <button onclick="backToTalk()">← 이전 화면</button>
+        <button class="primary" onclick="beginGame()">게임 시작 →</button>
+      </div>
     `;
     document.getElementById('game-guess-area').innerHTML = '';
     return;
