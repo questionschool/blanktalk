@@ -179,6 +179,11 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 /* '하면'을 숨길 때는 닫는 따옴표를 그 자리로 내리기 */
 .card.no-hamyeon .hamyeon { display: none; }
 .card.no-hamyeon .q-close { bottom: 16px; }
+/* 카드 뒷면 — 탭하면 펼쳐진다 */
+.card.back { cursor: pointer; background: #F3E6C8 center/cover no-repeat; }
+.card.back.back-positive { background-image: url('back-positive.jpg'); }
+.card.back.back-negative { background-image: url('back-negative.jpg'); }
+.card.back .card-top, .card.back .card-bottom { display: none; }
 .card .answer-text {
   position: absolute;
   inset: 44px 30px 60px;
@@ -253,6 +258,110 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
 .hint { margin-top: 16px; font-size: 13px; color: #BBB; text-align: center; }
 
+/* ---------- 첫 방문 안내 ---------- */
+#onboarding {
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 42, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+.ob-box {
+  background: #FAF7F0;
+  border-radius: 20px;
+  padding: 30px 26px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+.ob-title {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 32px;
+  color: #D97640;
+  margin-bottom: 6px;
+  word-break: keep-all;
+}
+.ob-sub { font-size: 13.5px; color: #999; margin-bottom: 18px; }
+.ob-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.ob-step .num {
+  flex: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #FBF4D8;
+  color: #D97640;
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob-box .btn { width: 100%; margin-top: 14px; }
+.linklike {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: #A0764D;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 16px;
+}
+
+/* ---------- 진행률 바 ---------- */
+.progress-wrap {
+  flex: 1;
+  height: 8px;
+  background: #EDE5D4;
+  border-radius: 4px;
+  margin: 0 12px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #D97640;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.progress-bar.neg { background: #7A8FA6; }
+
+/* ---------- 토스트 알림 ---------- */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #3A342B;
+  color: #FAF7F0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 90vw;
+  z-index: 60;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+#toast .btn.small { padding: 6px 14px; font-size: 13px; }
+
 @media (max-width: 480px) {
   body { padding: 14px; }
   header .logo { font-size: 32px; }
@@ -282,13 +391,29 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     </div>
   </div>
   <div class="status-msg error" id="login-msg"></div>
+  <button class="linklike" onclick="openOnboarding()">처음이신가요? 이용 안내 보기</button>
+</div>
+
+<!-- 첫 방문 안내 -->
+<div id="onboarding" hidden>
+  <div class="ob-box">
+    <div class="ob-title">Blank Talk 문답 노트</div>
+    <div class="ob-sub">빈칸을 채우며 나를 발견하는 기록장</div>
+    <div class="ob-step"><span class="num">1</span> 긍정·부정 카드 중 마음 가는 카드를 골라요. 랜덤으로 뽑을 수도 있어요.</div>
+    <div class="ob-step"><span class="num">2</span> "___ 하면" 빈칸에 나만의 답을 적어 기록해요.</div>
+    <div class="ob-step"><span class="num">3</span> 답한 카드는 노트에 차곡차곡 쌓이고, 예쁜 카드 이미지로 저장할 수도 있어요.</div>
+    <button class="btn" onclick="closeOnboarding()">시작하기</button>
+  </div>
 </div>
 
 <!-- ========== 2. 메인 화면 (카드 고르기 / 내 기록) ========== -->
 <div id="screen-main" hidden>
   <div class="topbar">
     <span class="who"><b id="who-name"></b> 님의 노트</span>
-    <button class="btn ghost small" onclick="logout()">노트 닫기</button>
+    <span>
+      <button class="btn ghost small" onclick="openOnboarding()">안내</button>
+      <button class="btn ghost small" onclick="logout()">노트 닫기</button>
+    </span>
   </div>
 
   <div class="tabs">
@@ -301,6 +426,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
   <div id="panel-cards">
     <div class="toolbar">
       <button class="btn small" id="random-btn" onclick="openRandomCard()">🎲 랜덤으로 한 장</button>
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
       <span class="count" id="answered-count"></span>
     </div>
     <div class="grid" id="card-grid"></div>
@@ -321,7 +447,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     <button class="btn ghost small" onclick="closeCard()">← 목록으로</button>
   </div>
 
-  <div class="card" id="card-view">
+  <div class="card" id="card-view" onclick="revealCard()">
     <div class="card-top">
       <span class="q-open">"</span>
       <span class="q-close">"</span>
@@ -333,7 +459,9 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     </div>
   </div>
 
-  <div class="answer-form">
+  <div class="hint" id="card-hint" hidden>카드를 눌러 펼쳐 보세요</div>
+
+  <div class="answer-form" id="answer-form">
     <textarea id="answer-input" maxlength="120"
       placeholder="어떤 순간에 그런가요? 빈칸에 들어갈 답을 적어 보세요."
       oninput="previewAnswer()"></textarea>
@@ -352,6 +480,12 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
 <div class="hint" id="global-msg"></div>
 
+<!-- 토스트 알림 -->
+<div id="toast" hidden>
+  <span id="toast-text"></span>
+  <button class="btn small" id="toast-retry" hidden>다시 시도</button>
+</div>
+
 <script>
 /* =====================================================================
    설정 — 구글시트 연동 주소
@@ -369,7 +503,8 @@ const state = {
   myAnswers: {},      // cardId → { answer, timestamp } (카드당 최신 답 하나)
   currentTab: 'positive',
   currentCard: null,
-  connectorOverride: null // null = 자동 감지, true/false = 참가자가 스위치로 정한 값
+  connectorOverride: null, // null = 자동 감지, true/false = 참가자가 스위치로 정한 값
+  cardRevealed: true       // false면 카드 뒷면이 보이는 상태
 };
 
 /* =====================================================================
@@ -451,6 +586,11 @@ async function init() {
       '체험 모드 — 기록이 이 브라우저에만 저장됩니다. (구글시트 연동은 설치안내.md 참고)';
   }
 
+  // 처음 온 참가자에게는 이용 안내부터
+  if (!localStorage.getItem('blanktalk-note-onboarded')) {
+    openOnboarding();
+  }
+
   // 이전에 연 노트가 있으면 자동으로 다시 열기
   const saved = lsGet('blanktalk-note-session', null);
   if (saved && saved.nickname) {
@@ -469,6 +609,46 @@ function showScreen(id) {
   }
 }
 
+/* ---------- 첫 방문 안내 ---------- */
+function openOnboarding() {
+  document.getElementById('onboarding').hidden = false;
+}
+function closeOnboarding() {
+  document.getElementById('onboarding').hidden = true;
+  localStorage.setItem('blanktalk-note-onboarded', 'yes');
+}
+
+/* ---------- 토스트 알림 ---------- */
+let toastTimer = null;
+function showToast(text, retryFn) {
+  const toast = document.getElementById('toast');
+  const retryBtn = document.getElementById('toast-retry');
+  document.getElementById('toast-text').textContent = text;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  if (retryFn) {
+    retryBtn.hidden = false;
+    retryBtn.onclick = () => { toast.hidden = true; retryFn(); };
+  } else {
+    retryBtn.hidden = true;
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 4000);
+  }
+}
+
+/* ---------- 답 초안 임시저장 (브라우저에만) ---------- */
+function draftStoreKey() {
+  return 'blanktalk-note-drafts:' + (state.user ? state.user.nickname : '');
+}
+function getDraft(cardId) {
+  return lsGet(draftStoreKey(), {})[cardId] || '';
+}
+function setDraft(cardId, text) {
+  const drafts = lsGet(draftStoreKey(), {});
+  if (text) drafts[cardId] = text;
+  else delete drafts[cardId];
+  localStorage.setItem(draftStoreKey(), JSON.stringify(drafts));
+}
+
 /* =====================================================================
    입장 / 퇴장
 ===================================================================== */
@@ -484,7 +664,7 @@ async function login() {
   }
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
-  btn.textContent = '여는 중…';
+  btn.textContent = '노트를 펴는 중…';
   const ok = await tryOpenNote(nickname, password);
   btn.disabled = false;
   btn.textContent = '노트 열기';
@@ -504,7 +684,20 @@ async function tryOpenNote(nickname, password) {
     state.user = { nickname, password };
     localStorage.setItem('blanktalk-note-session',
       JSON.stringify({ nickname, password }));
-    await loadMyAnswers();
+    try {
+      await loadMyAnswers();
+    } catch (err) {
+      // 입장은 시키되, 기록을 못 불러왔음을 알리고 다시 시도할 길을 열어둔다
+      showToast('지난 기록을 불러오지 못했어요.', async () => {
+        try {
+          await loadMyAnswers();
+          switchTab(state.currentTab);
+          showToast('기록을 불러왔어요.');
+        } catch (e) {
+          showToast('아직 연결이 안 돼요. 잠시 후 다시 시도해 주세요.', null);
+        }
+      });
+    }
     document.getElementById('who-name').textContent = nickname;
     switchTab('positive');
     showScreen('screen-main');
@@ -578,6 +771,11 @@ function renderGrid() {
   }
   document.getElementById('answered-count').textContent =
     '기록 ' + answered + ' / ' + cards.length;
+
+  // 진행률 바 — 탭 색에 맞춰 차오른다
+  const bar = document.getElementById('progress-bar');
+  bar.style.width = (answered / cards.length * 100) + '%';
+  bar.classList.toggle('neg', type === 'negative');
 }
 
 function openRandomCard() {
@@ -585,7 +783,7 @@ function openRandomCard() {
   const notAnswered = cards.filter(c => !(c.id in state.myAnswers));
   const pool = notAnswered.length > 0 ? notAnswered : cards;
   const card = pool[Math.floor(Math.random() * pool.length)];
-  openCard(card);
+  openCard(card, true);   // 뒷면부터 — 뽑는 설렘
 }
 
 function renderNotes() {
@@ -636,14 +834,27 @@ function entryConnector(entry) {
   return autoShowHamyeon(entry.answer) ? '하면' : '';
 }
 
-function openCard(card) {
+function openCard(card, faceDown = false) {
   state.currentCard = card;
   const view = document.getElementById('card-view');
   view.className = 'card card-' + card.color;
   document.getElementById('card-response').textContent = card.response;
 
   const existing = state.myAnswers[card.id];
-  document.getElementById('answer-input').value = existing ? existing.answer : '';
+  const msg = document.getElementById('card-msg');
+  msg.classList.remove('error');
+
+  // 쓰다 만 초안이 있으면 그것부터 되살린다
+  const draft = getDraft(card.id);
+  if (draft && (!existing || draft.trim() !== existing.answer)) {
+    document.getElementById('answer-input').value = draft;
+    msg.textContent = '쓰다 만 답을 되살렸어요. 이어서 써 보세요.';
+  } else {
+    document.getElementById('answer-input').value = existing ? existing.answer : '';
+    msg.textContent = existing
+      ? formatDate(existing.timestamp) + '에 기록한 답이에요. 고쳐서 다시 기록할 수도 있어요.'
+      : '';
+  }
 
   // 스위치는 자동 모드로 시작하되, 저장해 둔 선택이 자동 판단과 다르면 그 선택을 존중
   state.connectorOverride = null;
@@ -653,11 +864,35 @@ function openCard(card) {
       state.connectorOverride = savedShow;
     }
   }
-  document.getElementById('card-msg').textContent =
-    existing ? formatDate(existing.timestamp) + '에 기록한 답이에요. 고쳐서 다시 기록할 수도 있어요.' : '';
-  document.getElementById('card-msg').classList.remove('error');
+
+  state.cardRevealed = !faceDown;
+  applyCardFace();
   previewAnswer();
   showScreen('screen-card');
+}
+
+/* 카드의 앞면/뒷면 상태를 화면에 반영 */
+function applyCardFace() {
+  const card = state.currentCard;
+  const view = document.getElementById('card-view');
+  const showBack = !state.cardRevealed;
+  view.classList.toggle('back', showBack);
+  view.classList.toggle('back-positive', showBack && card.type === 'positive');
+  view.classList.toggle('back-negative', showBack && card.type === 'negative');
+  document.getElementById('answer-form').hidden = showBack;
+  document.getElementById('card-hint').hidden = !showBack;
+}
+
+/* 뒷면 상태에서 카드를 탭하면 펼치기 */
+function revealCard() {
+  if (state.cardRevealed) return;
+  state.cardRevealed = true;
+  applyCardFace();
+  // 펼침 애니메이션 다시 재생
+  const view = document.getElementById('card-view');
+  view.style.animation = 'none';
+  void view.offsetWidth;
+  view.style.animation = '';
 }
 
 function closeCard() {
@@ -680,6 +915,14 @@ function previewAnswer() {
     else if (text.length > 28) el.classList.add('long');
   }
   document.getElementById('png-btn').disabled = !text;
+
+  // 쓰는 중인 답을 초안으로 보관 — 저장된 답과 같아지면 초안은 지운다
+  if (state.user && state.currentCard) {
+    const saved = state.myAnswers[state.currentCard.id];
+    const raw = document.getElementById('answer-input').value;
+    if (saved && saved.answer === raw.trim()) setDraft(state.currentCard.id, '');
+    else setDraft(state.currentCard.id, raw.trim() ? raw : '');
+  }
 
   // '하면' 표시 여부를 카드와 스위치에 반영
   const show = showHamyeon();
@@ -712,6 +955,7 @@ async function saveAnswer() {
     const result = await api.save(nickname, password, card, answer, connector);
     if (result.ok) {
       state.myAnswers[card.id] = { answer, connector, timestamp: new Date().toISOString() };
+      setDraft(card.id, '');   // 기록됐으니 초안은 비운다
       msg.textContent = '노트에 기록되었어요.';
     } else {
       msg.classList.add('error');
