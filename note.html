@@ -176,6 +176,9 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 .card .q-open  { top: 12px;    left: 20px;   font-size: 38px; }
 .card .q-close { bottom: 52px; right: 22px;  font-size: 38px; }
 .card .hamyeon { bottom: 12px; right: 20px;  font-size: 22px; }
+/* '하면'을 숨길 때는 닫는 따옴표를 그 자리로 내리기 */
+.card.no-hamyeon .hamyeon { display: none; }
+.card.no-hamyeon .q-close { bottom: 16px; }
 .card .answer-text {
   position: absolute;
   inset: 44px 30px 60px;
@@ -231,6 +234,18 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
   line-height: 1.5;
 }
 .answer-form textarea:focus { outline: none; border-color: #D97640; }
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #6B5B45;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-row input { width: 16px; height: 16px; accent-color: #D97640; }
+.toggle-row .auto-note { font-size: 12px; color: #BBB; }
 .card-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
 .status-msg { margin-top: 12px; font-size: 14px; color: #7BA05B; min-height: 20px; }
 .status-msg.error { color: #C0563E; }
@@ -310,7 +325,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     <div class="card-top">
       <span class="q-open">"</span>
       <span class="q-close">"</span>
-      <span class="hamyeon">하면</span>
+      <span class="hamyeon" id="card-hamyeon">하면</span>
       <div class="answer-text" id="card-answer-text"></div>
     </div>
     <div class="card-bottom">
@@ -322,6 +337,11 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     <textarea id="answer-input" maxlength="120"
       placeholder="어떤 순간에 그런가요? 빈칸에 들어갈 답을 적어 보세요."
       oninput="previewAnswer()"></textarea>
+    <label class="toggle-row">
+      <input type="checkbox" id="connector-toggle" checked onchange="connectorToggled()">
+      카드에 '하면' 붙이기
+      <span class="auto-note">답이 '~면'으로 끝나면 자동으로 꺼져요</span>
+    </label>
     <div class="card-actions">
       <button class="btn" id="save-btn" onclick="saveAnswer()">기록하기</button>
       <button class="btn ghost" id="png-btn" onclick="downloadPng()">PNG 카드로 저장</button>
@@ -348,7 +368,8 @@ const state = {
   user: null,         // { nickname, password }
   myAnswers: {},      // cardId → { answer, timestamp } (카드당 최신 답 하나)
   currentTab: 'positive',
-  currentCard: null
+  currentCard: null,
+  connectorOverride: null // null = 자동 감지, true/false = 참가자가 스위치로 정한 값
 };
 
 /* =====================================================================
@@ -390,16 +411,16 @@ const api = {
     return remoteCall({ action: 'login', nickname, password });
   },
 
-  async save(nickname, password, card, answer) {
+  async save(nickname, password, card, answer, connector) {
     if (isLocalMode()) {
       const rows = lsGet(LS_ANSWERS, []);
       rows.push({ nickname, cardId: card.id, cardType: card.type,
-                  answer, timestamp: new Date().toISOString() });
+                  answer, connector, timestamp: new Date().toISOString() });
       localStorage.setItem(LS_ANSWERS, JSON.stringify(rows));
       return { ok: true };
     }
     return remoteCall({ action: 'save', nickname, password,
-                        cardId: card.id, cardType: card.type, answer });
+                        cardId: card.id, cardType: card.type, answer, connector });
   },
 
   async list(nickname, password) {
@@ -512,6 +533,7 @@ async function loadMyAnswers() {
     for (const row of result.answers) {   // 나중 행이 최신 — 덮어쓰기
       state.myAnswers[row.cardId] = {
         answer: row.answer,
+        connector: row.connector,   // '하면' | '' | 예전 기록이면 undefined
         timestamp: row.timestamp
       };
     }
@@ -577,11 +599,13 @@ function renderNotes() {
     }
     for (const card of answeredCards) {
       const entry = state.myAnswers[card.id];
+      const conn = entryConnector(entry);   // '하면' 또는 ''
       const item = document.createElement('button');
       item.className = 'note-item';
       item.innerHTML =
         '<div class="sentence">“<span class="blank">' + esc(entry.answer) +
-        '</span>” 하면 <b>' + esc(card.response) + '</b></div>' +
+        '</span>”' + (conn ? ' ' + conn + ' ' : ' ') +
+        '<b>' + esc(card.response) + '</b></div>' +
         '<div class="when">' + formatDate(entry.timestamp) + '</div>';
       item.onclick = () => openCard(card);
       box.appendChild(item);
@@ -592,6 +616,26 @@ function renderNotes() {
 /* =====================================================================
    카드 화면 — 문답 기록
 ===================================================================== */
+
+/* '하면'을 자동으로 붙일지 판단 — 답이 이미 '~면'으로 끝나면 뺀다 */
+function autoShowHamyeon(text) {
+  return !(text && text.endsWith('면'));
+}
+
+/* 지금 카드에 '하면'을 보여줄지 — 스위치를 만졌으면 그 값, 아니면 자동 */
+function showHamyeon() {
+  const text = document.getElementById('answer-input').value.trim();
+  return state.connectorOverride === null
+    ? autoShowHamyeon(text)
+    : state.connectorOverride;
+}
+
+/* 저장된 기록의 연결어 — 예전 기록(연결어 없음)은 자동 규칙으로 추정 */
+function entryConnector(entry) {
+  if (entry.connector === '하면' || entry.connector === '') return entry.connector;
+  return autoShowHamyeon(entry.answer) ? '하면' : '';
+}
+
 function openCard(card) {
   state.currentCard = card;
   const view = document.getElementById('card-view');
@@ -600,6 +644,15 @@ function openCard(card) {
 
   const existing = state.myAnswers[card.id];
   document.getElementById('answer-input').value = existing ? existing.answer : '';
+
+  // 스위치는 자동 모드로 시작하되, 저장해 둔 선택이 자동 판단과 다르면 그 선택을 존중
+  state.connectorOverride = null;
+  if (existing) {
+    const savedShow = entryConnector(existing) === '하면';
+    if (savedShow !== autoShowHamyeon(existing.answer)) {
+      state.connectorOverride = savedShow;
+    }
+  }
   document.getElementById('card-msg').textContent =
     existing ? formatDate(existing.timestamp) + '에 기록한 답이에요. 고쳐서 다시 기록할 수도 있어요.' : '';
   document.getElementById('card-msg').classList.remove('error');
@@ -627,6 +680,17 @@ function previewAnswer() {
     else if (text.length > 28) el.classList.add('long');
   }
   document.getElementById('png-btn').disabled = !text;
+
+  // '하면' 표시 여부를 카드와 스위치에 반영
+  const show = showHamyeon();
+  document.getElementById('card-view').classList.toggle('no-hamyeon', !show);
+  document.getElementById('connector-toggle').checked = show;
+}
+
+/* 참가자가 '하면' 스위치를 직접 만졌을 때 */
+function connectorToggled() {
+  state.connectorOverride = document.getElementById('connector-toggle').checked;
+  previewAnswer();
 }
 
 async function saveAnswer() {
@@ -644,9 +708,10 @@ async function saveAnswer() {
   btn.textContent = '기록 중…';
   try {
     const { nickname, password } = state.user;
-    const result = await api.save(nickname, password, card, answer);
+    const connector = showHamyeon() ? '하면' : '';
+    const result = await api.save(nickname, password, card, answer, connector);
     if (result.ok) {
-      state.myAnswers[card.id] = { answer, timestamp: new Date().toISOString() };
+      state.myAnswers[card.id] = { answer, connector, timestamp: new Date().toISOString() };
       msg.textContent = '노트에 기록되었어요.';
     } else {
       msg.classList.add('error');
@@ -696,16 +761,19 @@ async function downloadPng() {
   ctx.fillStyle = COLOR_HEX[card.color] || '#ECD850';
   ctx.fillRect(0, half, CANVAS_W, half);
 
-  // 따옴표와 '하면'
+  // 따옴표와 '하면' — 스위치에 따라 '하면'은 빠질 수 있다
+  const withHamyeon = showHamyeon();
   ctx.fillStyle = '#D97640';
   ctx.font = "92px 'Nanum Pen Script'";
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';
   ctx.fillText('"', 52, 28);
   ctx.textAlign = 'right';
-  ctx.fillText('"', CANVAS_W - 56, half - 210);
-  ctx.font = "54px 'Nanum Pen Script'";
-  ctx.fillText('하면', CANVAS_W - 52, half - 84);
+  ctx.fillText('"', CANVAS_W - 56, withHamyeon ? half - 210 : half - 140);
+  if (withHamyeon) {
+    ctx.font = "54px 'Nanum Pen Script'";
+    ctx.fillText('하면', CANVAS_W - 52, half - 84);
+  }
 
   // 빈칸의 답 — 길이에 맞춰 글씨 크기 고르고 줄바꿈해서 가운데에
   ctx.fillStyle = '#2A2A2A';
