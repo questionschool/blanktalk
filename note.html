@@ -7,6 +7,9 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Blank Talk 문답 노트">
 <meta property="og:description" content="빈칸을 채우는 대화, 나를 발견하는 기록">
+<meta name="theme-color" content="#FAF7F0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -240,6 +243,26 @@ body.font-xlarge { zoom: 1.25; }
 .note-item .sentence .blank { font-family: 'Gaegu', cursive; font-weight: 700; color: #D97640; }
 .note-item .when { font-size: 12px; color: #BBB; margin-top: 4px; }
 .notes-empty { color: #AAA; font-size: 14px; padding: 8px 2px; }
+/* 내 기록 검색·정렬·출력 도구 */
+.notes-controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.notes-controls input {
+  flex: 1;
+  min-width: 130px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 12px;
+  background: #fff;
+}
+.notes-controls input:focus { outline: none; border-color: #D97640; }
+
 .share-badge {
   display: inline-block;
   font-size: 11px;
@@ -385,6 +408,64 @@ body.font-xlarge { zoom: 1.25; }
 .toggle-row input { width: 16px; height: 16px; accent-color: #D97640; }
 .toggle-row .auto-note { font-size: 12px; color: #BBB; }
 .card-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+/* 카드 꾸미기 — 색 고르기와 별칭·날짜 스탬프 */
+.deco-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #A0764D;
+}
+.deco-dots { display: flex; gap: 6px; }
+.deco-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.08);
+  cursor: pointer;
+  padding: 0;
+}
+.deco-dot.active { border-color: #2A2A2A; }
+.dot-yellow { background: #ECD850; }
+.dot-pink   { background: #E26887; }
+.dot-mint   { background: #88DBC2; }
+.dot-coral  { background: #EC826B; }
+.dot-green  { background: #ABD971; }
+.deco-stamp-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+.deco-stamp-label input { accent-color: #D97640; }
+
+/* 인쇄용 모아보기 — 인쇄할 때만 나타난다 */
+#print-sheet { display: none; }
+@media print {
+  body > *:not(#print-sheet) { display: none !important; }
+  #print-sheet { display: block !important; color: #000; }
+  #print-sheet h1 {
+    font-family: 'Nanum Pen Script', cursive;
+    color: #D97640;
+    font-size: 32px;
+    margin-bottom: 2px;
+  }
+  #print-sheet .print-meta { color: #888; font-size: 12px; margin-bottom: 16px; }
+  #print-sheet h2 {
+    font-family: 'Nanum Pen Script', cursive;
+    font-size: 22px;
+    margin: 14px 0 6px;
+  }
+  #print-sheet .print-item {
+    font-size: 13px;
+    line-height: 1.7;
+    border-bottom: 1px dashed #DDD;
+    padding: 4px 0;
+  }
+  #print-sheet .print-item span { color: #999; font-size: 11px; margin-left: 6px; }
+}
 .status-msg { margin-top: 12px; font-size: 14px; color: #7BA05B; min-height: 20px; }
 .status-msg.error { color: #C0563E; }
 .back-row {
@@ -627,6 +708,12 @@ body.font-xlarge { zoom: 1.25; }
   <!-- 내 기록 인덱스 -->
   <div id="panel-notes" hidden>
     <div class="stats-box" id="stats-box" hidden></div>
+    <div class="notes-controls">
+      <input id="notes-search" type="text" placeholder="내 기록 검색" oninput="renderNotes()">
+      <button class="btn ghost small" id="notes-sort" onclick="toggleNotesSort()">카드순</button>
+      <button class="btn ghost small" onclick="printNotes()">인쇄</button>
+      <button class="btn ghost small" onclick="downloadNotes()">내려받기</button>
+    </div>
     <div class="notes-section-title">긍정 카드의 기록</div>
     <div id="notes-positive"></div>
     <div class="notes-section-title neg">부정 카드의 기록</div>
@@ -681,6 +768,20 @@ body.font-xlarge { zoom: 1.25; }
     <div class="card-actions">
       <button class="btn" id="save-btn" onclick="saveAnswer()">기록하기</button>
       <button class="btn ghost" id="png-btn" onclick="downloadPng()">PNG 카드로 저장</button>
+      <button class="btn ghost" id="share-btn" onclick="shareCard()">바로 공유</button>
+    </div>
+    <div class="deco-row">
+      <span>카드 꾸미기</span>
+      <span class="deco-dots">
+        <button class="deco-dot dot-yellow" onclick="pickDecoColor('yellow', this)" title="노랑"></button>
+        <button class="deco-dot dot-pink" onclick="pickDecoColor('pink', this)" title="분홍"></button>
+        <button class="deco-dot dot-mint" onclick="pickDecoColor('mint', this)" title="민트"></button>
+        <button class="deco-dot dot-coral" onclick="pickDecoColor('coral', this)" title="코랄"></button>
+        <button class="deco-dot dot-green" onclick="pickDecoColor('green', this)" title="연두"></button>
+      </span>
+      <label class="deco-stamp-label">
+        <input type="checkbox" id="deco-stamp"> 별칭·날짜 넣기
+      </label>
     </div>
     <div class="status-msg" id="card-msg"></div>
   </div>
@@ -693,6 +794,9 @@ body.font-xlarge { zoom: 1.25; }
 </div>
 
 <div class="hint" id="global-msg"></div>
+
+<!-- 인쇄용 모아보기 (인쇄할 때만 보임) -->
+<div id="print-sheet"></div>
 
 <!-- 초대 링크 만들기 바 -->
 <div id="invite-bar" hidden>
@@ -732,7 +836,9 @@ const state = {
   invite: { cards: [], group: '' },  // 초대 링크(URL)로 전달받은 카드와 모임 이름
   selecting: false,        // 초대 링크 만들기 모드
   selected: [],            // 초대할 카드로 고른 ID들
-  lastInviteLink: ''       // 마지막으로 만든 초대 링크
+  lastInviteLink: '',      // 마지막으로 만든 초대 링크
+  pngColor: null,          // 카드 꾸미기에서 고른 색 (null = 카드 본래 색)
+  notesSort: 'card'        // 내 기록 정렬: 'card'(카드순) | 'recent'(최근순)
 };
 
 /* =====================================================================
@@ -1201,12 +1307,24 @@ function openRandomCard() {
 
 function renderNotes() {
   renderStats();
+  const query = (document.getElementById('notes-search').value || '').trim();
   for (const type of ['positive', 'negative']) {
     const box = document.getElementById('notes-' + type);
     box.innerHTML = '';
-    const answeredCards = cardsOfType(type).filter(c => c.id in state.myAnswers);
+    let answeredCards = cardsOfType(type).filter(c => c.id in state.myAnswers);
+    // 검색어가 있으면 답변·반응 문구에서 찾기
+    if (query) {
+      answeredCards = answeredCards.filter(c =>
+        c.response.includes(query) || state.myAnswers[c.id].answer.includes(query));
+    }
+    // 최근순 정렬이면 나중에 기록한 것부터
+    if (state.notesSort === 'recent') {
+      answeredCards = [...answeredCards].sort((a, b) =>
+        state.myAnswers[b.id].timestamp.localeCompare(state.myAnswers[a.id].timestamp));
+    }
     if (answeredCards.length === 0) {
-      box.innerHTML = '<div class="notes-empty">아직 기록한 카드가 없어요.</div>';
+      box.innerHTML = '<div class="notes-empty">' +
+        (query ? '검색과 맞는 기록이 없어요.' : '아직 기록한 카드가 없어요.') + '</div>';
       continue;
     }
     for (const card of answeredCards) {
@@ -1225,6 +1343,69 @@ function renderNotes() {
       box.appendChild(item);
     }
   }
+}
+
+/* ---------- 내 기록 정렬 전환 ---------- */
+function toggleNotesSort() {
+  state.notesSort = state.notesSort === 'card' ? 'recent' : 'card';
+  document.getElementById('notes-sort').textContent =
+    state.notesSort === 'card' ? '카드순' : '최근순';
+  renderNotes();
+}
+
+/* ---------- 인쇄용 모아보기 — 내 기록 전체를 한 장으로 ---------- */
+function printNotes() {
+  const sheet = document.getElementById('print-sheet');
+  let html = '<h1>Blank Talk 문답 노트</h1>' +
+    '<div class="print-meta">' + esc(state.user.nickname) + ' · ' +
+    formatDate(new Date().toISOString()) + '</div>';
+  let count = 0;
+  for (const type of ['positive', 'negative']) {
+    const cards = cardsOfType(type).filter(c => c.id in state.myAnswers);
+    if (cards.length === 0) continue;
+    html += '<h2>' + (type === 'positive' ? '긍정 카드' : '부정 카드') + '</h2>';
+    for (const card of cards) {
+      const entry = state.myAnswers[card.id];
+      const conn = entryConnector(entry);
+      html += '<div class="print-item">“' + esc(entry.answer) + '”' +
+        (conn ? ' ' + conn : '') + ' <b>' + esc(card.response) + '</b>' +
+        '<span>' + formatDate(entry.timestamp) + '</span></div>';
+      count++;
+    }
+  }
+  if (count === 0) { showToast('아직 인쇄할 기록이 없어요.'); return; }
+  sheet.innerHTML = html;
+  window.print();
+}
+
+/* ---------- 내 기록 텍스트 파일로 내려받기 ---------- */
+function downloadNotes() {
+  const lines = ['Blank Talk 문답 노트 — ' + state.user.nickname,
+                 formatDate(new Date().toISOString()) + ' 내려받음', ''];
+  let count = 0;
+  for (const type of ['positive', 'negative']) {
+    const cards = cardsOfType(type).filter(c => c.id in state.myAnswers);
+    if (cards.length === 0) continue;
+    lines.push('[' + (type === 'positive' ? '긍정 카드' : '부정 카드') + ']');
+    for (const card of cards) {
+      const entry = state.myAnswers[card.id];
+      const conn = entryConnector(entry);
+      lines.push('- "' + entry.answer + '"' + (conn ? ' ' + conn : '') +
+        ' ' + card.response + ' (' + formatDate(entry.timestamp) + ')');
+      count++;
+    }
+    lines.push('');
+  }
+  if (count === 0) { showToast('아직 내려받을 기록이 없어요.'); return; }
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  a.download = 'blanktalk-notes-' + d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0') + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /* ---------- 나의 작은 통계 ---------- */
@@ -1358,6 +1539,12 @@ function openCard(card, faceDown = false) {
   const view = document.getElementById('card-view');
   view.className = 'card card-' + card.color;
   document.getElementById('card-response').textContent = card.response;
+
+  // 카드 꾸미기 초기화 — 카드 본래 색이 기본
+  state.pngColor = null;
+  document.getElementById('deco-stamp').checked = false;
+  document.querySelectorAll('.deco-dot').forEach(d =>
+    d.classList.toggle('active', d.classList.contains('dot-' + card.color)));
 
   const existing = state.myAnswers[card.id];
   const msg = document.getElementById('card-msg');
@@ -1553,6 +1740,7 @@ function previewAnswer() {
     else if (text.length > 28) el.classList.add('long');
   }
   document.getElementById('png-btn').disabled = !text;
+  document.getElementById('share-btn').disabled = !text;
 
   // 쓰는 중인 답을 초안으로 보관 — 저장된 답과 같아지면 초안은 지운다
   if (state.user && state.currentCard) {
@@ -1636,10 +1824,23 @@ const COLOR_HEX = {
   coral: '#EC826B', green: '#ABD971'
 };
 
-async function downloadPng() {
+/* 카드 꾸미기: 색 고르면 화면 카드와 PNG에 함께 반영 */
+function pickDecoColor(color, btn) {
+  state.pngColor = color;
+  document.querySelectorAll('.deco-dot').forEach(d =>
+    d.classList.toggle('active', d === btn));
+  const view = document.getElementById('card-view');
+  for (const c of ['yellow', 'pink', 'mint', 'coral', 'green']) {
+    view.classList.remove('card-' + c);
+  }
+  view.classList.add('card-' + color);
+}
+
+/* 카드를 캔버스에 그려서 돌려주기 — PNG 저장·바로 공유가 함께 쓴다 */
+async function buildCardCanvas() {
   const card = state.currentCard;
   const answer = document.getElementById('answer-input').value.trim();
-  if (!card || !answer) return;
+  if (!card || !answer) return null;
 
   // 캔버스에 쓸 손글씨 폰트가 준비될 때까지 기다리기
   await document.fonts.load("700 60px Gaegu", "가");
@@ -1656,10 +1857,10 @@ async function downloadPng() {
 
   const half = CANVAS_H / 2;
 
-  // 윗면(연노랑)과 아랫면(카드 색)
+  // 윗면(연노랑)과 아랫면(카드 색 또는 꾸미기에서 고른 색)
   ctx.fillStyle = '#FBF4D8';
   ctx.fillRect(0, 0, CANVAS_W, half);
-  ctx.fillStyle = COLOR_HEX[card.color] || '#ECD850';
+  ctx.fillStyle = COLOR_HEX[state.pngColor || card.color] || '#ECD850';
   ctx.fillRect(0, half, CANVAS_W, half);
 
   // 따옴표와 '하면' — 스위치에 따라 '하면'은 빠질 수 있다
@@ -1691,6 +1892,18 @@ async function downloadPng() {
     sizes: [78, 66, 56], weight: 700, family: 'Gaegu'
   });
 
+  // 별칭·날짜 스탬프 (꾸미기에서 켰을 때만)
+  if (document.getElementById('deco-stamp').checked) {
+    ctx.fillStyle = 'rgba(42,42,42,0.55)';
+    ctx.font = "700 34px Gaegu";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const today = new Date();
+    ctx.fillText(state.user.nickname + ' · ' + today.getFullYear() + '.'
+      + (today.getMonth() + 1) + '.' + today.getDate(),
+      CANVAS_W / 2, CANVAS_H - 90);
+  }
+
   // 작은 로고
   ctx.fillStyle = 'rgba(42,42,42,0.38)';
   ctx.font = "34px 'Nanum Pen Script'";
@@ -1698,18 +1911,53 @@ async function downloadPng() {
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('Blank Talk', CANVAS_W / 2, CANVAS_H - 42);
 
-  // 내려받기
+  return canvas;
+}
+
+function pngFileName() {
+  const today = new Date();
+  const stamp = today.getFullYear()
+    + String(today.getMonth() + 1).padStart(2, '0')
+    + String(today.getDate()).padStart(2, '0');
+  return 'blanktalk-' + state.currentCard.id + '-' + stamp + '.png';
+}
+
+async function downloadPng() {
+  const canvas = await buildCardCanvas();
+  if (!canvas) return;
   canvas.toBlob(blob => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     // 한글 파일명은 브라우저가 무시하는 경우가 있어 영문으로
-    const today = new Date();
-    const stamp = today.getFullYear()
-      + String(today.getMonth() + 1).padStart(2, '0')
-      + String(today.getDate()).padStart(2, '0');
-    a.download = 'blanktalk-' + card.id + '-' + stamp + '.png';
+    a.download = pngFileName();
     a.click();
     URL.revokeObjectURL(a.href);
+  }, 'image/png');
+}
+
+/* 바로 공유 — 휴대폰이면 카카오톡 등으로, 안 되면 파일로 저장 */
+async function shareCard() {
+  const canvas = await buildCardCanvas();
+  if (!canvas) return;
+  canvas.toBlob(async blob => {
+    const file = new File([blob], pngFileName(), { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Blank Talk',
+          text: '빈칸을 채우는 대화, Blank Talk'
+        });
+      } catch (err) { /* 사용자가 공유를 취소한 경우 — 조용히 */ }
+    } else {
+      // 공유를 지원하지 않는 브라우저 — 파일 저장으로 대신
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = pngFileName();
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('이 브라우저는 바로 공유가 안 돼서 파일로 저장했어요.');
+    }
   }, 'image/png');
 }
 
@@ -1831,6 +2079,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') stepCard(1);
   if (e.key === 'ArrowLeft') stepCard(-1);
 });
+
+// 홈 화면 앱(PWA) — 오프라인 캐시 담당 일꾼 등록
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* 지원 안 되면 조용히 */ });
+}
 
 init();
 </script>
