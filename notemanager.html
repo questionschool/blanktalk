@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blank Talk — 관리자 노트</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #FAF7F0;
+  color: #2A2A2A;
+  min-height: 100vh;
+  padding: 20px;
+}
+header { text-align: center; margin-bottom: 16px; }
+header .logo {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 38px;
+  color: #D97640;
+}
+header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
+
+.btn {
+  display: inline-block;
+  border: none;
+  border-radius: 22px;
+  padding: 10px 20px;
+  font-size: 14.5px;
+  font-family: inherit;
+  cursor: pointer;
+  background: #D97640;
+  color: #fff;
+}
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.ghost { background: transparent; color: #A0764D; border: 1.5px solid #E3D5C0; }
+.btn.small { padding: 7px 14px; font-size: 13px; }
+
+/* ---------- 입장 ---------- */
+#screen-login { max-width: 340px; margin: 40px auto 0; text-align: center; }
+#screen-login .box {
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 18px;
+  padding: 28px 24px;
+}
+#screen-login label { display: block; text-align: left; font-size: 13px; color: #A0764D; margin-bottom: 4px; }
+#screen-login input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 12px;
+  background: #FDFBF6;
+}
+#screen-login input:focus { outline: none; border-color: #D97640; }
+#screen-login .btn { width: 100%; margin-top: 18px; }
+.status-msg { margin-top: 12px; font-size: 14px; color: #C0563E; min-height: 20px; }
+
+/* ---------- 본 화면 ---------- */
+#screen-main { max-width: 860px; margin: 0 auto; }
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.controls select, .controls input {
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 12px;
+  background: #fff;
+  color: #2A2A2A;
+}
+.controls input { flex: 1; min-width: 130px; }
+.controls select:focus, .controls input:focus { outline: none; border-color: #D97640; }
+.summary {
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #6B5B45;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.summary b { color: #2A2A2A; }
+
+/* 기록 한 줄 */
+.row-item {
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.row-meta { flex: none; width: 150px; font-size: 12px; color: #999; }
+.row-meta .nick { display: block; font-size: 14px; font-weight: 600; color: #6B5B45; }
+.row-meta .grp { display: inline-block; background: #FBF4D8; color: #A0764D; border-radius: 8px; padding: 0 7px; font-size: 11px; margin-top: 2px; }
+.row-meta .open-badge { display: inline-block; background: #FDEBE5; color: #C0563E; border-radius: 8px; padding: 0 7px; font-size: 11px; margin-top: 2px; }
+.row-sentence { flex: 1; word-break: keep-all; }
+.row-sentence .blank { font-weight: 700; }
+.row-item.type-positive .blank { color: #D64545; }
+.row-item.type-negative .blank { color: #3D6FB4; }
+.row-del {
+  flex: none;
+  background: none;
+  border: 1px solid #E8C7BC;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #C0563E;
+  cursor: pointer;
+}
+.row-del.arm { background: #C0563E; border-color: #C0563E; color: #fff; }
+.empty { color: #AAA; font-size: 14px; padding: 16px 4px; text-align: center; }
+
+/* ---------- 토스트 ---------- */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #3A342B;
+  color: #FAF7F0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 14px;
+  z-index: 60;
+}
+
+/* ---------- 인쇄(PDF 저장)용 ---------- */
+#print-sheet { display: none; }
+@media print {
+  body > *:not(#print-sheet) { display: none !important; }
+  #print-sheet { display: block !important; color: #000; }
+  #print-sheet h1 { font-family: 'Nanum Pen Script', cursive; color: #D97640; font-size: 30px; }
+  #print-sheet .print-meta { color: #888; font-size: 12px; margin-bottom: 14px; }
+  #print-sheet .print-item {
+    font-size: 12.5px;
+    line-height: 1.7;
+    border-bottom: 1px dashed #DDD;
+    padding: 4px 0;
+  }
+  #print-sheet .print-item span { color: #999; font-size: 11px; margin-left: 6px; }
+}
+
+@media (max-width: 600px) {
+  .row-item { flex-direction: column; gap: 4px; }
+  .row-meta { width: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Blank Talk</div>
+  <div class="subtitle">문답 노트 · 관리자</div>
+</header>
+
+<!-- ========== 입장 ========== -->
+<div id="screen-login" hidden>
+  <div class="box">
+    <label for="master-pw">관리자 비밀번호</label>
+    <input id="master-pw" type="password" maxlength="30">
+    <button class="btn" id="login-btn" onclick="login()">열기</button>
+  </div>
+  <div class="status-msg" id="login-msg"></div>
+</div>
+
+<!-- ========== 본 화면 ========== -->
+<div id="screen-main" hidden>
+  <div class="controls">
+    <select id="f-nick" onchange="render()"><option value="">모든 별칭</option></select>
+    <select id="f-group" onchange="render()"><option value="">모든 모임</option></select>
+    <select id="f-type" onchange="render()">
+      <option value="">긍정+부정</option>
+      <option value="positive">긍정만</option>
+      <option value="negative">부정만</option>
+    </select>
+    <input id="f-search" type="text" placeholder="답변·문구 검색" oninput="render()">
+  </div>
+  <div class="controls">
+    <button class="btn small" onclick="reload()">새로고침</button>
+    <button class="btn ghost small" onclick="downloadCsv()">CSV 내려받기</button>
+    <button class="btn ghost small" onclick="printPdf()">PDF로 저장 (인쇄)</button>
+    <button class="btn ghost small" onclick="logout()" style="margin-left:auto;">닫기</button>
+  </div>
+  <div class="summary" id="summary"></div>
+  <div id="rows"></div>
+</div>
+
+<div id="print-sheet"></div>
+<div id="toast" hidden><span id="toast-text"></span></div>
+
+<script>
+/* =====================================================================
+   설정 — note.html과 같은 구글시트 연동 주소
+===================================================================== */
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNLZ_f29BIN0wq4q4LUgatuNp2X-qjit29taUZBu1I70hO22Xytmb8MOr6_zvFgFsh/exec';
+
+const state = {
+  master: '',   // 입장할 때 확인된 관리자 비밀번호
+  rows: [],     // 전체 기록 (최근 것부터)
+  cards: {}     // 카드ID → 카드 정보
+};
+
+/* ---------- 저장소 ---------- */
+const isLocalMode = () => SCRIPT_URL.trim() === '';
+
+async function remoteCall(payload) {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+  return res.json();
+}
+
+const api = {
+  async adminList(master) {
+    if (isLocalMode()) {
+      // 체험 모드 — 이 브라우저의 note.html 기록을 본다 (테스트용)
+      if (master !== 'tlp3079') return { ok: false, error: 'wrong_master' };
+      const rows = JSON.parse(localStorage.getItem('blanktalk-note-answers') || '[]');
+      return { ok: true, answers: rows };
+    }
+    return remoteCall({ action: 'adminlist', master });
+  },
+  async adminDelete(master, row) {
+    if (isLocalMode()) {
+      if (master !== 'tlp3079') return { ok: false, error: 'wrong_master' };
+      const rows = JSON.parse(localStorage.getItem('blanktalk-note-answers') || '[]');
+      const kept = rows.filter(r =>
+        !(r.nickname === row.nickname && r.cardId === row.cardId && r.timestamp === row.timestamp));
+      if (kept.length === rows.length) return { ok: false, error: 'not_found' };
+      localStorage.setItem('blanktalk-note-answers', JSON.stringify(kept));
+      return { ok: true };
+    }
+    return remoteCall({ action: 'admindelete', master,
+      nickname: row.nickname, cardId: row.cardId, timestamp: row.timestamp });
+  }
+};
+
+/* ---------- 시작 ---------- */
+async function init() {
+  try {
+    const res = await fetch('cards.json');
+    const data = await res.json();
+    for (const card of data.cards) state.cards[card.id] = card;
+  } catch (err) {
+    document.getElementById('login-msg').textContent =
+      'cards.json을 불러오지 못했습니다. 같은 폴더에 있는지 확인해 주세요.';
+  }
+  showScreen('screen-login');
+}
+
+function showScreen(id) {
+  for (const s of ['screen-login', 'screen-main']) {
+    document.getElementById(s).hidden = (s !== id);
+  }
+}
+
+let toastTimer = null;
+function showToast(text) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 4000);
+}
+
+/* ---------- 입장 / 퇴장 ---------- */
+async function login() {
+  const pw = document.getElementById('master-pw').value;
+  const msg = document.getElementById('login-msg');
+  const btn = document.getElementById('login-btn');
+  msg.textContent = '';
+  if (!pw) { msg.textContent = '비밀번호를 넣어 주세요.'; return; }
+  btn.disabled = true;
+  btn.textContent = '확인 중…';
+  try {
+    const result = await api.adminList(pw);
+    if (!result.ok) {
+      msg.textContent = result.error === 'wrong_master'
+        ? '비밀번호가 맞지 않아요.'
+        : '열지 못했어요. 잠시 후 다시 시도해 주세요.';
+    } else {
+      state.master = pw;
+      acceptRows(result.answers);
+      showScreen('screen-main');
+    }
+  } catch (err) {
+    msg.textContent = '연결에 실패했어요. 인터넷과 SCRIPT_URL 설정을 확인해 주세요.';
+  }
+  btn.disabled = false;
+  btn.textContent = '열기';
+}
+
+function logout() {
+  state.master = '';
+  state.rows = [];
+  document.getElementById('master-pw').value = '';
+  showScreen('screen-login');
+}
+
+async function reload() {
+  try {
+    const result = await api.adminList(state.master);
+    if (result.ok) {
+      acceptRows(result.answers);
+      showToast('새로 불러왔어요.');
+    }
+  } catch (err) {
+    showToast('불러오지 못했어요. 잠시 후 다시 시도해 주세요.');
+  }
+}
+
+/* 받은 기록을 최근 것부터 정렬해 담고, 별칭·모임 선택지 채우기 */
+function acceptRows(answers) {
+  state.rows = [...answers].sort((a, b) =>
+    String(b.timestamp).localeCompare(String(a.timestamp)));
+
+  const nicks = [...new Set(state.rows.map(r => r.nickname))].sort();
+  const groups = [...new Set(state.rows.map(r => r.group || '').filter(Boolean))].sort();
+  fillSelect('f-nick', nicks, '모든 별칭');
+  fillSelect('f-group', groups, '모든 모임');
+  render();
+}
+
+function fillSelect(id, values, allLabel) {
+  const sel = document.getElementById(id);
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">' + allLabel + '</option>';
+  for (const v of values) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  }
+  sel.value = values.includes(keep) ? keep : '';
+}
+
+/* ---------- 필터 적용해서 그리기 ---------- */
+function filteredRows() {
+  const nick = document.getElementById('f-nick').value;
+  const group = document.getElementById('f-group').value;
+  const type = document.getElementById('f-type').value;
+  const query = document.getElementById('f-search').value.trim();
+  return state.rows.filter(r => {
+    if (nick && r.nickname !== nick) return false;
+    if (group && (r.group || '') !== group) return false;
+    if (type && r.cardType !== type) return false;
+    if (query) {
+      const card = state.cards[r.cardId];
+      const hay = r.answer + ' ' + (card ? card.response : '') + ' ' + r.nickname;
+      if (!hay.includes(query)) return false;
+    }
+    return true;
+  });
+}
+
+function sentenceOf(row) {
+  const card = state.cards[row.cardId];
+  const response = card ? card.response : row.cardId;
+  const conn = row.connector === '하면' ? ' 하면'
+    : row.connector === '' && row.answer.endsWith('면') ? ''
+    : row.connector ? ' ' + row.connector : ' 하면';
+  return { response, conn };
+}
+
+function render() {
+  const rows = filteredRows();
+  const box = document.getElementById('rows');
+  box.innerHTML = '';
+
+  const nickCount = new Set(state.rows.map(r => r.nickname)).size;
+  const groupCount = new Set(state.rows.map(r => r.group || '').filter(Boolean)).size;
+  document.getElementById('summary').innerHTML =
+    '전체 <b>' + state.rows.length + '개</b> 기록 · 별칭 <b>' + nickCount +
+    '</b> · 모임 <b>' + groupCount + '</b>' +
+    (rows.length !== state.rows.length ? ' — 지금 <b>' + rows.length + '개</b> 표시 중' : '');
+
+  if (rows.length === 0) {
+    box.innerHTML = '<div class="empty">보여줄 기록이 없어요.</div>';
+    return;
+  }
+
+  for (const row of rows) {
+    const { response, conn } = sentenceOf(row);
+    const item = document.createElement('div');
+    item.className = 'row-item type-' + row.cardType;
+
+    const meta = document.createElement('div');
+    meta.className = 'row-meta';
+    meta.innerHTML = '<span class="nick"></span>' + formatDate(row.timestamp) +
+      (row.group ? ' <span class="grp"></span>' : '') +
+      (row.shared === '공개' ? ' <span class="open-badge">모임 공개</span>' : '');
+    meta.querySelector('.nick').textContent = row.nickname;
+    if (row.group) meta.querySelector('.grp').textContent = row.group;
+
+    const sentence = document.createElement('div');
+    sentence.className = 'row-sentence';
+    const blank = document.createElement('span');
+    blank.className = 'blank';
+    blank.textContent = '“' + row.answer + '”';
+    sentence.appendChild(blank);
+    sentence.appendChild(document.createTextNode(conn + ' ' + response));
+
+    const del = document.createElement('button');
+    del.className = 'row-del';
+    del.textContent = '삭제';
+    del.onclick = () => confirmDelete(del, row);
+
+    item.append(meta, sentence, del);
+    box.appendChild(item);
+  }
+}
+
+/* ---------- 삭제 — 실수 방지 두 번 탭 ---------- */
+function confirmDelete(btn, row) {
+  if (!btn.classList.contains('arm')) {
+    btn.classList.add('arm');
+    btn.textContent = '정말요?';
+    setTimeout(() => {
+      btn.classList.remove('arm');
+      btn.textContent = '삭제';
+    }, 3000);
+    return;
+  }
+  deleteRow(row);
+}
+
+async function deleteRow(row) {
+  try {
+    const result = await api.adminDelete(state.master, row);
+    if (!result.ok) {
+      showToast('삭제하지 못했어요. 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+    state.rows = state.rows.filter(r =>
+      !(r.nickname === row.nickname && r.cardId === row.cardId && r.timestamp === row.timestamp));
+    render();
+    showToast('기록 한 줄을 삭제했어요.');
+  } catch (err) {
+    showToast('연결에 실패했어요. 다시 시도해 주세요.');
+  }
+}
+
+/* ---------- CSV 내려받기 (지금 필터된 기록) ---------- */
+function downloadCsv() {
+  const rows = filteredRows();
+  if (rows.length === 0) { showToast('내려받을 기록이 없어요.'); return; }
+  const header = ['날짜', '별칭', '모임', '카드ID', '카드종류', '반응', '답변', '연결어', '공개'];
+  const lines = [header.join(',')];
+  for (const row of rows) {
+    const card = state.cards[row.cardId];
+    lines.push([
+      formatDate(row.timestamp),
+      row.nickname,
+      row.group || '',
+      row.cardId,
+      row.cardType === 'positive' ? '긍정' : '부정',
+      card ? card.response : '',
+      row.answer,
+      row.connector || '',
+      row.shared || ''
+    ].map(csvCell).join(','));
+  }
+  // 맨 앞의 BOM은 엑셀이 한글을 제대로 읽게 하는 표식
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const d = new Date();
+  a.download = 'blanktalk-records-' + d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0') + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function csvCell(value) {
+  const s = String(value ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+/* ---------- PDF로 저장 — 인쇄 대화상자에서 'PDF로 저장' 선택 ---------- */
+function printPdf() {
+  const rows = filteredRows();
+  if (rows.length === 0) { showToast('인쇄할 기록이 없어요.'); return; }
+  const sheet = document.getElementById('print-sheet');
+  let html = '<h1>Blank Talk 문답 기록</h1>' +
+    '<div class="print-meta">' + formatDate(new Date().toISOString()) +
+    ' · ' + rows.length + '개 기록</div>';
+  for (const row of rows) {
+    const { response, conn } = sentenceOf(row);
+    html += '<div class="print-item"><b>' + esc(row.nickname) + '</b>' +
+      (row.group ? ' (' + esc(row.group) + ')' : '') + ' — “' + esc(row.answer) + '”' +
+      esc(conn) + ' ' + esc(response) +
+      '<span>' + formatDate(row.timestamp) + '</span></div>';
+  }
+  sheet.innerHTML = html;
+  window.print();
+}
+
+/* ---------- 잔손 도구 ---------- */
+function esc(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+}
+
+document.getElementById('master-pw').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+init();
+</script>
+</body>
+</html>

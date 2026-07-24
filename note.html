@@ -7,6 +7,11 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Blank Talk 문답 노트">
 <meta property="og:description" content="빈칸을 채우는 대화, 나를 발견하는 기록">
+<!-- 카톡·SNS 공유 썸네일 — 도메인이 확정되면 전체 주소로 바꾸면 더 확실해요
+     예: content="https://도메인/og-note.png" -->
+<meta property="og:image" content="og-note.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="theme-color" content="#FAF7F0">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -240,7 +245,10 @@ body.font-xlarge { zoom: 1.25; }
   font-family: inherit;
 }
 .note-item .sentence { font-size: 15.5px; line-height: 1.5; color: #2A2A2A; }
-.note-item .sentence .blank { font-family: 'Gaegu', cursive; font-weight: 700; color: #D97640; }
+/* 따옴표 안팎 폰트는 같게, 색으로만 구분 — 긍정 빨강, 부정 파랑 */
+.note-item .sentence .blank { font-weight: 700; }
+.note-item.type-positive .blank { color: #D64545; }
+.note-item.type-negative .blank { color: #3D6FB4; }
 .note-item .when { font-size: 12px; color: #BBB; margin-top: 4px; }
 .notes-empty { color: #AAA; font-size: 14px; padding: 8px 2px; }
 /* 내 기록 검색·정렬·출력 도구 */
@@ -262,6 +270,18 @@ body.font-xlarge { zoom: 1.25; }
   background: #fff;
 }
 .notes-controls input:focus { outline: none; border-color: #D97640; }
+.notes-filter { display: flex; gap: 6px; margin-bottom: 10px; }
+.filter-pill {
+  padding: 7px 15px;
+  border-radius: 18px;
+  border: 1.5px solid #E3D5C0;
+  background: #fff;
+  color: #A0764D;
+  font-size: 13.5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.filter-pill.active { background: #6B5B45; border-color: #6B5B45; color: #fff; }
 
 .share-badge {
   display: inline-block;
@@ -714,9 +734,14 @@ body.font-xlarge { zoom: 1.25; }
       <button class="btn ghost small" onclick="printNotes()">인쇄</button>
       <button class="btn ghost small" onclick="downloadNotes()">내려받기</button>
     </div>
-    <div class="notes-section-title">긍정 카드의 기록</div>
+    <div class="notes-filter">
+      <button class="filter-pill active" id="filter-all" onclick="setNotesFilter('all')">전체</button>
+      <button class="filter-pill" id="filter-positive" onclick="setNotesFilter('positive')">긍정만</button>
+      <button class="filter-pill" id="filter-negative" onclick="setNotesFilter('negative')">부정만</button>
+    </div>
+    <div class="notes-section-title" id="notes-title-positive">긍정 카드의 기록</div>
     <div id="notes-positive"></div>
-    <div class="notes-section-title neg">부정 카드의 기록</div>
+    <div class="notes-section-title neg" id="notes-title-negative">부정 카드의 기록</div>
     <div id="notes-negative"></div>
   </div>
 
@@ -780,7 +805,10 @@ body.font-xlarge { zoom: 1.25; }
         <button class="deco-dot dot-green" onclick="pickDecoColor('green', this)" title="연두"></button>
       </span>
       <label class="deco-stamp-label">
-        <input type="checkbox" id="deco-stamp"> 별칭·날짜 넣기
+        <input type="checkbox" id="deco-name"> 별칭 넣기
+      </label>
+      <label class="deco-stamp-label">
+        <input type="checkbox" id="deco-date"> 날짜 넣기
       </label>
     </div>
     <div class="status-msg" id="card-msg"></div>
@@ -838,7 +866,8 @@ const state = {
   selected: [],            // 초대할 카드로 고른 ID들
   lastInviteLink: '',      // 마지막으로 만든 초대 링크
   pngColor: null,          // 카드 꾸미기에서 고른 색 (null = 카드 본래 색)
-  notesSort: 'card'        // 내 기록 정렬: 'card'(카드순) | 'recent'(최근순)
+  notesSort: 'card',       // 내 기록 정렬: 'card'(카드순) | 'recent'(최근순)
+  notesFilter: 'all'       // 내 기록 필터: 'all' | 'positive' | 'negative'
 };
 
 /* =====================================================================
@@ -1305,11 +1334,26 @@ function openRandomCard() {
   openCard(card, true);   // 뒷면부터 — 뽑는 설렘
 }
 
+/* 내 기록 필터 — 전체 / 긍정만 / 부정만 */
+function setNotesFilter(filter) {
+  state.notesFilter = filter;
+  for (const f of ['all', 'positive', 'negative']) {
+    document.getElementById('filter-' + f).classList.toggle('active', f === filter);
+  }
+  renderNotes();
+}
+
 function renderNotes() {
   renderStats();
   const query = (document.getElementById('notes-search').value || '').trim();
   for (const type of ['positive', 'negative']) {
     const box = document.getElementById('notes-' + type);
+    const title = document.getElementById('notes-title-' + type);
+    // 필터에서 제외된 종류는 통째로 숨긴다
+    const shown = state.notesFilter === 'all' || state.notesFilter === type;
+    box.hidden = !shown;
+    title.hidden = !shown;
+    if (!shown) continue;
     box.innerHTML = '';
     let answeredCards = cardsOfType(type).filter(c => c.id in state.myAnswers);
     // 검색어가 있으면 답변·반응 문구에서 찾기
@@ -1333,7 +1377,7 @@ function renderNotes() {
       const badge = entry.shared === '공개'
         ? '<span class="share-badge">모임 공개</span>' : '';
       const item = document.createElement('button');
-      item.className = 'note-item';
+      item.className = 'note-item type-' + type;
       item.innerHTML =
         '<div class="sentence">“<span class="blank">' + esc(entry.answer) +
         '</span>”' + (conn ? ' ' + conn + ' ' : ' ') +
@@ -1542,7 +1586,8 @@ function openCard(card, faceDown = false) {
 
   // 카드 꾸미기 초기화 — 카드 본래 색이 기본
   state.pngColor = null;
-  document.getElementById('deco-stamp').checked = false;
+  document.getElementById('deco-name').checked = false;
+  document.getElementById('deco-date').checked = false;
   document.querySelectorAll('.deco-dot').forEach(d =>
     d.classList.toggle('active', d.classList.contains('dot-' + card.color)));
 
@@ -1892,16 +1937,21 @@ async function buildCardCanvas() {
     sizes: [78, 66, 56], weight: 700, family: 'Gaegu'
   });
 
-  // 별칭·날짜 스탬프 (꾸미기에서 켰을 때만)
-  if (document.getElementById('deco-stamp').checked) {
+  // 별칭·날짜 스탬프 — 각각 골라서 넣을 수 있다
+  const stampParts = [];
+  if (document.getElementById('deco-name').checked) {
+    stampParts.push(state.user.nickname);
+  }
+  if (document.getElementById('deco-date').checked) {
+    const today = new Date();
+    stampParts.push(today.getFullYear() + '.' + (today.getMonth() + 1) + '.' + today.getDate());
+  }
+  if (stampParts.length > 0) {
     ctx.fillStyle = 'rgba(42,42,42,0.55)';
     ctx.font = "700 34px Gaegu";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    const today = new Date();
-    ctx.fillText(state.user.nickname + ' · ' + today.getFullYear() + '.'
-      + (today.getMonth() + 1) + '.' + today.getDate(),
-      CANVAS_W / 2, CANVAS_H - 90);
+    ctx.fillText(stampParts.join(' · '), CANVAS_W / 2, CANVAS_H - 90);
   }
 
   // 작은 로고
