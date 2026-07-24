@@ -104,6 +104,37 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .toolbar .count { font-size: 13.5px; color: #999; }
 
+/* ---------- 오늘의 카드 ---------- */
+.today-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: #FBF4D8;
+  border: 1.5px dashed #E3C87A;
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.today-card .today-label {
+  flex: none;
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 21px;
+  color: #D97640;
+}
+.today-card .today-sentence {
+  flex: 1;
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 17px;
+  color: #2A2A2A;
+  word-break: keep-all;
+}
+.today-card .today-mark { flex: none; font-size: 12px; color: #A0764D; }
+
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .chip {
   display: flex;
@@ -130,6 +161,20 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 .chip .hamyeon-mini { color: #C9B99A; font-size: 13px; margin-left: auto; flex: none; }
 
 /* ---------- 내 기록 (인덱스) ---------- */
+.stats-box {
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #6B5B45;
+  line-height: 1.7;
+}
+.stats-box b { color: #2A2A2A; }
+.stats-box .stats-words { color: #A0764D; }
+.stats-box .stats-dates { font-size: 12.5px; color: #BBB; }
+
 .notes-section-title {
   font-family: 'Nanum Pen Script', cursive;
   font-size: 26px;
@@ -254,7 +299,42 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 .card-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
 .status-msg { margin-top: 12px; font-size: 14px; color: #7BA05B; min-height: 20px; }
 .status-msg.error { color: #C0563E; }
-.back-row { text-align: left; margin-bottom: 10px; }
+.back-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.step-btns { display: flex; gap: 6px; }
+.step-btns .btn { padding: 8px 14px; }
+
+/* ---------- 이 카드의 지난 기록 ---------- */
+.history {
+  margin-top: 20px;
+  text-align: left;
+  border-top: 1px dashed #E3D5C0;
+  padding-top: 14px;
+}
+.history-title {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 21px;
+  color: #A0764D;
+  margin-bottom: 8px;
+}
+.history-item {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.history-item .h-date { flex: none; font-size: 12px; color: #BBB; }
+.history-item .h-answer { color: #2A2A2A; word-break: keep-all; }
 
 .hint { margin-top: 16px; font-size: 13px; color: #BBB; text-align: center; }
 
@@ -424,6 +504,11 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
   <!-- 카드 목록 -->
   <div id="panel-cards">
+    <button class="today-card" id="today-card" onclick="openTodayCard()">
+      <span class="today-label">오늘의 카드</span>
+      <span class="today-sentence" id="today-sentence"></span>
+      <span class="today-mark" id="today-mark"></span>
+    </button>
     <div class="toolbar">
       <button class="btn small" id="random-btn" onclick="openRandomCard()">🎲 랜덤으로 한 장</button>
       <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
@@ -434,6 +519,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
   <!-- 내 기록 인덱스 -->
   <div id="panel-notes" hidden>
+    <div class="stats-box" id="stats-box" hidden></div>
     <div class="notes-section-title">긍정 카드의 기록</div>
     <div id="notes-positive"></div>
     <div class="notes-section-title neg">부정 카드의 기록</div>
@@ -445,6 +531,10 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 <div id="screen-card" hidden>
   <div class="back-row">
     <button class="btn ghost small" onclick="closeCard()">← 목록으로</button>
+    <span class="step-btns">
+      <button class="btn ghost small" onclick="stepCard(-1)" title="이전 카드">‹</button>
+      <button class="btn ghost small" onclick="stepCard(1)" title="다음 카드">›</button>
+    </span>
   </div>
 
   <div class="card" id="card-view" onclick="revealCard()">
@@ -476,6 +566,12 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     </div>
     <div class="status-msg" id="card-msg"></div>
   </div>
+
+  <!-- 이 카드에 남긴 지난 기록들 -->
+  <div class="history" id="history-box" hidden>
+    <div class="history-title">이 카드의 지난 기록</div>
+    <div id="history-list"></div>
+  </div>
 </div>
 
 <div class="hint" id="global-msg"></div>
@@ -501,6 +597,7 @@ const state = {
   cards: [],          // cards.json에서 불러온 80장
   user: null,         // { nickname, password }
   myAnswers: {},      // cardId → { answer, timestamp } (카드당 최신 답 하나)
+  myHistory: {},      // cardId → [ 모든 기록, 오래된 순 ]
   currentTab: 'positive',
   currentCard: null,
   connectorOverride: null, // null = 자동 감지, true/false = 참가자가 스위치로 정한 값
@@ -722,13 +819,16 @@ async function loadMyAnswers() {
   const { nickname, password } = state.user;
   const result = await api.list(nickname, password);
   state.myAnswers = {};
+  state.myHistory = {};
   if (result.ok && Array.isArray(result.answers)) {
     for (const row of result.answers) {   // 나중 행이 최신 — 덮어쓰기
-      state.myAnswers[row.cardId] = {
+      const entry = {
         answer: row.answer,
         connector: row.connector,   // '하면' | '' | 예전 기록이면 undefined
         timestamp: row.timestamp
       };
+      state.myAnswers[row.cardId] = entry;
+      (state.myHistory[row.cardId] = state.myHistory[row.cardId] || []).push(entry);
     }
   }
 }
@@ -776,6 +876,32 @@ function renderGrid() {
   const bar = document.getElementById('progress-bar');
   bar.style.width = (answered / cards.length * 100) + '%';
   bar.classList.toggle('neg', type === 'negative');
+
+  renderTodayCard();
+}
+
+/* ---------- 오늘의 카드 — 날짜에 따라 매일 한 장 ---------- */
+function todaysCard() {
+  const d = new Date();
+  const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  let seed = (key * 48271) % 2147483647;   // 날짜를 골고루 섞는 간단한 셈
+  return state.cards[seed % state.cards.length];
+}
+
+function renderTodayCard() {
+  const card = todaysCard();
+  if (!card) return;
+  const conn = '하면';
+  document.getElementById('today-sentence').textContent =
+    '“___” ' + conn + ' ' + card.response;
+  document.getElementById('today-mark').textContent =
+    card.id in state.myAnswers ? '기록 완료 ✓' : '아직 빈칸';
+}
+
+function openTodayCard() {
+  const card = todaysCard();
+  // 아직 답하지 않았다면 뒷면부터 — 오늘의 카드를 뽑는 기분으로
+  openCard(card, !(card.id in state.myAnswers));
 }
 
 function openRandomCard() {
@@ -787,6 +913,7 @@ function openRandomCard() {
 }
 
 function renderNotes() {
+  renderStats();
   for (const type of ['positive', 'negative']) {
     const box = document.getElementById('notes-' + type);
     box.innerHTML = '';
@@ -809,6 +936,51 @@ function renderNotes() {
       box.appendChild(item);
     }
   }
+}
+
+/* ---------- 나의 작은 통계 ---------- */
+function renderStats() {
+  const box = document.getElementById('stats-box');
+  const answeredIds = Object.keys(state.myAnswers);
+  if (answeredIds.length === 0) { box.hidden = true; return; }
+
+  // 카드 목록에서 종류를 찾아 긍정/부정을 센다
+  const pos = answeredIds.filter(id =>
+    state.cards.some(c => c.id === id && c.type === 'positive')).length;
+  const neg = answeredIds.length - pos;
+
+  // 자주 쓴 말 — 답변에서 두 글자 이상 낱말을 세어 상위 3개
+  const counts = {};
+  for (const id of answeredIds) {
+    const words = state.myAnswers[id].answer
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 2);
+    for (const w of words) counts[w] = (counts[w] || 0) + 1;
+  }
+  const topWords = Object.entries(counts)
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([w]) => w);
+
+  // 첫 기록과 최근 기록 날짜
+  const times = answeredIds.map(id => state.myAnswers[id].timestamp).sort();
+  const first = formatDate(times[0]);
+  const last = formatDate(times[times.length - 1]);
+
+  let html = '<b>긍정 ' + pos + '장 · 부정 ' + neg + '장</b> — 80장 중 '
+    + answeredIds.length + '장을 채웠어요';
+  if (topWords.length > 0) {
+    html += '<br><span class="stats-words">자주 쓴 말: '
+      + topWords.map(w => '“' + esc(w) + '”').join(', ') + '</span>';
+  }
+  if (first) {
+    html += '<br><span class="stats-dates">첫 기록 ' + first
+      + (last !== first ? ' · 최근 ' + last : '') + '</span>';
+  }
+  box.innerHTML = html;
+  box.hidden = false;
 }
 
 /* =====================================================================
@@ -868,7 +1040,37 @@ function openCard(card, faceDown = false) {
   state.cardRevealed = !faceDown;
   applyCardFace();
   previewAnswer();
+  renderHistory(card);
   showScreen('screen-card');
+}
+
+/* 이 카드에 남긴 지난 기록들 — 두 번 이상 답했을 때 보인다 */
+function renderHistory(card) {
+  const box = document.getElementById('history-box');
+  const list = document.getElementById('history-list');
+  const entries = state.myHistory[card.id] || [];
+  if (entries.length < 2) { box.hidden = true; return; }
+  list.innerHTML = '';
+  for (const entry of [...entries].reverse()) {   // 최근 것부터
+    const conn = entryConnector(entry);
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML =
+      '<span class="h-date">' + formatDate(entry.timestamp) + '</span>' +
+      '<span class="h-answer">“' + esc(entry.answer) + '”' +
+      (conn ? ' ' + conn : '') + '</span>';
+    list.appendChild(item);
+  }
+  box.hidden = false;
+}
+
+/* 이전/다음 카드로 이동 — 같은 종류(긍정/부정) 안에서 순환 */
+function stepCard(dir) {
+  const card = state.currentCard;
+  if (!card) return;
+  const list = cardsOfType(card.type);
+  const i = list.findIndex(c => c.id === card.id);
+  openCard(list[(i + dir + list.length) % list.length]);
 }
 
 /* 카드의 앞면/뒷면 상태를 화면에 반영 */
@@ -954,8 +1156,11 @@ async function saveAnswer() {
     const connector = showHamyeon() ? '하면' : '';
     const result = await api.save(nickname, password, card, answer, connector);
     if (result.ok) {
-      state.myAnswers[card.id] = { answer, connector, timestamp: new Date().toISOString() };
+      const entry = { answer, connector, timestamp: new Date().toISOString() };
+      state.myAnswers[card.id] = entry;
+      (state.myHistory[card.id] = state.myHistory[card.id] || []).push(entry);
       setDraft(card.id, '');   // 기록됐으니 초안은 비운다
+      renderHistory(card);
       msg.textContent = '노트에 기록되었어요.';
     } else {
       msg.classList.add('error');
@@ -1132,6 +1337,30 @@ function formatDate(iso) {
   if (isNaN(d)) return '';
   return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
 }
+
+/* ---------- 카드 화면에서 좌우 스와이프·화살표 키로 이전/다음 ---------- */
+let touchStartX = null;
+const cardViewEl = document.getElementById('card-view');
+cardViewEl.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].clientX;
+}, { passive: true });
+cardViewEl.addEventListener('touchend', e => {
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  touchStartX = null;
+  if (Math.abs(dx) < 60) return;          // 살짝 움직인 건 무시
+  stepCard(dx < 0 ? 1 : -1);              // 왼쪽으로 밀면 다음 카드
+}, { passive: true });
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('screen-card').hidden) return;
+  const typing = document.activeElement &&
+    (document.activeElement.tagName === 'TEXTAREA' ||
+     document.activeElement.tagName === 'INPUT');
+  if (typing) return;
+  if (e.key === 'ArrowRight') stepCard(1);
+  if (e.key === 'ArrowLeft') stepCard(-1);
+});
 
 init();
 </script>
