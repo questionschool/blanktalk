@@ -1937,21 +1937,24 @@ async function buildCardCanvas() {
     sizes: [78, 66, 56], weight: 700, family: 'Gaegu'
   });
 
-  // 별칭·날짜 스탬프 — 각각 골라서 넣을 수 있다
-  const stampParts = [];
+  // 별칭 — 카드 맨 위에 "◯◯ 님은" 으로, 문장의 첫머리처럼
   if (document.getElementById('deco-name').checked) {
-    stampParts.push(state.user.nickname);
+    ctx.fillStyle = 'rgba(42,42,42,0.8)';
+    ctx.font = "700 44px Gaegu";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(state.user.nickname + ' 님은', CANVAS_W / 2, 46);
   }
+
+  // 날짜 — 하단에 그대로
   if (document.getElementById('deco-date').checked) {
     const today = new Date();
-    stampParts.push(today.getFullYear() + '.' + (today.getMonth() + 1) + '.' + today.getDate());
-  }
-  if (stampParts.length > 0) {
     ctx.fillStyle = 'rgba(42,42,42,0.55)';
     ctx.font = "700 34px Gaegu";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(stampParts.join(' · '), CANVAS_W / 2, CANVAS_H - 90);
+    ctx.fillText(today.getFullYear() + '.' + (today.getMonth() + 1) + '.' + today.getDate(),
+      CANVAS_W / 2, CANVAS_H - 90);
   }
 
   // 작은 로고
