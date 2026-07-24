@@ -335,6 +335,19 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 }
 .history-item .h-date { flex: none; font-size: 12px; color: #BBB; }
 .history-item .h-answer { color: #2A2A2A; word-break: keep-all; }
+.history-item .h-actions { margin-left: auto; display: flex; gap: 4px; flex: none; }
+.h-btn {
+  background: none;
+  border: 1px solid #E3D5C0;
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #A0764D;
+  cursor: pointer;
+}
+.h-btn.danger { color: #C0563E; border-color: #E8C7BC; }
+.h-btn.danger.arm { background: #C0563E; border-color: #C0563E; color: #fff; }
 
 .hint { margin-top: 16px; font-size: 13px; color: #BBB; text-align: center; }
 
@@ -646,13 +659,27 @@ const api = {
   async save(nickname, password, card, answer, connector) {
     if (isLocalMode()) {
       const rows = lsGet(LS_ANSWERS, []);
+      const timestamp = new Date().toISOString();
       rows.push({ nickname, cardId: card.id, cardType: card.type,
-                  answer, connector, timestamp: new Date().toISOString() });
+                  answer, connector, timestamp });
       localStorage.setItem(LS_ANSWERS, JSON.stringify(rows));
-      return { ok: true };
+      return { ok: true, timestamp };
     }
     return remoteCall({ action: 'save', nickname, password,
                         cardId: card.id, cardType: card.type, answer, connector });
+  },
+
+  // 기록 한 줄 지우기 — 별칭·카드·시각이 모두 맞는 행을 찾아 삭제
+  async remove(nickname, password, cardId, timestamp) {
+    if (isLocalMode()) {
+      const rows = lsGet(LS_ANSWERS, []);
+      const kept = rows.filter(r =>
+        !(r.nickname === nickname && r.cardId === cardId && r.timestamp === timestamp));
+      if (kept.length === rows.length) return { ok: false, error: 'not_found' };
+      localStorage.setItem(LS_ANSWERS, JSON.stringify(kept));
+      return { ok: true };
+    }
+    return remoteCall({ action: 'delete', nickname, password, cardId, timestamp });
   },
 
   async list(nickname, password) {
@@ -1044,24 +1071,96 @@ function openCard(card, faceDown = false) {
   showScreen('screen-card');
 }
 
-/* 이 카드에 남긴 지난 기록들 — 두 번 이상 답했을 때 보인다 */
+/* 이 카드에 남긴 기록들 — 고치거나 지울 수 있다 */
 function renderHistory(card) {
   const box = document.getElementById('history-box');
   const list = document.getElementById('history-list');
   const entries = state.myHistory[card.id] || [];
-  if (entries.length < 2) { box.hidden = true; return; }
+  if (entries.length === 0) { box.hidden = true; return; }
   list.innerHTML = '';
   for (const entry of [...entries].reverse()) {   // 최근 것부터
     const conn = entryConnector(entry);
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.innerHTML =
-      '<span class="h-date">' + formatDate(entry.timestamp) + '</span>' +
-      '<span class="h-answer">“' + esc(entry.answer) + '”' +
-      (conn ? ' ' + conn : '') + '</span>';
+
+    const date = document.createElement('span');
+    date.className = 'h-date';
+    date.textContent = formatDate(entry.timestamp);
+
+    const answer = document.createElement('span');
+    answer.className = 'h-answer';
+    answer.textContent = '“' + entry.answer + '”' + (conn ? ' ' + conn : '');
+
+    const actions = document.createElement('span');
+    actions.className = 'h-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'h-btn h-load';
+    editBtn.textContent = '고치기';
+    editBtn.onclick = () => loadHistoryEntry(entry);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'h-btn danger h-del';
+    delBtn.textContent = '지우기';
+    delBtn.onclick = () => confirmDeleteEntry(delBtn, card, entry);
+
+    actions.append(editBtn, delBtn);
+    item.append(date, answer, actions);
     list.appendChild(item);
   }
   box.hidden = false;
+}
+
+/* 지난 답을 입력창으로 불러오기 — 고쳐서 기록하면 새 기록으로 남는다 */
+function loadHistoryEntry(entry) {
+  document.getElementById('answer-input').value = entry.answer;
+  previewAnswer();
+  const msg = document.getElementById('card-msg');
+  msg.classList.remove('error');
+  msg.textContent = '이 답을 불러왔어요. 고쳐서 기록하면 새 기록으로 남아요.';
+  document.getElementById('answer-input').focus();
+}
+
+/* 지우기는 실수 방지를 위해 두 번 탭 — 첫 탭에 "정말요?" */
+function confirmDeleteEntry(btn, card, entry) {
+  if (!btn.classList.contains('arm')) {
+    btn.classList.add('arm');
+    btn.textContent = '정말요?';
+    setTimeout(() => {
+      btn.classList.remove('arm');
+      btn.textContent = '지우기';
+    }, 3000);
+    return;
+  }
+  deleteEntry(card, entry);
+}
+
+async function deleteEntry(card, entry) {
+  const msg = document.getElementById('card-msg');
+  try {
+    const { nickname, password } = state.user;
+    const result = await api.remove(nickname, password, card.id, entry.timestamp);
+    if (!result.ok) {
+      msg.classList.add('error');
+      msg.textContent = '지우지 못했어요. 잠시 후 다시 시도해 주세요.';
+      return;
+    }
+    // 화면의 기억에서도 지우기
+    const remaining = (state.myHistory[card.id] || [])
+      .filter(e => e.timestamp !== entry.timestamp);
+    if (remaining.length === 0) {
+      delete state.myHistory[card.id];
+      delete state.myAnswers[card.id];
+    } else {
+      state.myHistory[card.id] = remaining;
+      state.myAnswers[card.id] = remaining[remaining.length - 1];
+    }
+    showToast('기록 한 줄을 지웠어요.');
+    openCard(card);   // 카드 화면을 새 상태로 다시 그리기 (앞면 그대로)
+  } catch (err) {
+    msg.classList.add('error');
+    msg.textContent = '연결에 실패했어요. 인터넷을 확인하고 다시 시도해 주세요.';
+  }
 }
 
 /* 이전/다음 카드로 이동 — 같은 종류(긍정/부정) 안에서 순환 */
@@ -1156,7 +1255,9 @@ async function saveAnswer() {
     const connector = showHamyeon() ? '하면' : '';
     const result = await api.save(nickname, password, card, answer, connector);
     if (result.ok) {
-      const entry = { answer, connector, timestamp: new Date().toISOString() };
+      // 시각은 저장소가 알려준 값을 쓴다 — 나중에 그 행을 지울 때 꼭 맞아야 하므로
+      const entry = { answer, connector,
+                      timestamp: result.timestamp || new Date().toISOString() };
       state.myAnswers[card.id] = entry;
       (state.myHistory[card.id] = state.myHistory[card.id] || []).push(entry);
       setDraft(card.id, '');   // 기록됐으니 초안은 비운다
