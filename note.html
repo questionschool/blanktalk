@@ -134,6 +134,48 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
   word-break: keep-all;
 }
 .today-card .today-mark { flex: none; font-size: 12px; color: #A0764D; }
+/* 초대 카드 배너 — 오늘의 카드와 같은 결, 코랄 톤 */
+.today-card.invite { border-color: #EC826B; background: #FDEBE5; }
+.today-card.invite .today-label { color: #C0563E; }
+
+/* 초대 링크 만들기 — 선택된 카드 표시 */
+.chip.selected { border-color: #EC826B; background: #FDEBE5; }
+.chip.selected .dot { background: #EC826B; }
+
+/* 초대 링크 만들기 — 화면 아래 고정 바 */
+#invite-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(680px, 94vw);
+  background: #fff;
+  border: 1.5px solid #EC826B;
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  z-index: 40;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+  font-size: 14px;
+}
+#invite-bar .invite-count { color: #C0563E; font-weight: 600; }
+#invite-bar input {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 10px;
+}
+#invite-link-out { width: 100%; background: #FDF8EC; color: #6B5B45; }
+
+/* 글자 크기 — 보통/크게/더 크게 */
+body.font-large { zoom: 1.12; }
+body.font-xlarge { zoom: 1.25; }
 
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .chip {
@@ -477,6 +519,8 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     <input id="login-nickname" type="text" maxlength="20" placeholder="예: 질문술사" autocomplete="off">
     <label for="login-password">비밀번호</label>
     <input id="login-password" type="password" maxlength="30" placeholder="노트를 여는 열쇠">
+    <label for="login-group">모임 이름 <span style="color:#BBB;">(선택)</span></label>
+    <input id="login-group" type="text" maxlength="20" placeholder="함께하는 모임이 있다면">
     <button class="btn" id="login-btn" onclick="login()">노트 열기</button>
     <div class="note">
       처음 쓰는 별칭이면 그 비밀번호로 새 노트가 만들어지고,<br>
@@ -504,6 +548,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
   <div class="topbar">
     <span class="who"><b id="who-name"></b> 님의 노트</span>
     <span>
+      <button class="btn ghost small" onclick="cycleFontSize()" title="글자 크기">가⁺</button>
       <button class="btn ghost small" onclick="openOnboarding()">안내</button>
       <button class="btn ghost small" onclick="logout()">노트 닫기</button>
     </span>
@@ -517,6 +562,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
   <!-- 카드 목록 -->
   <div id="panel-cards">
+    <button class="today-card invite" id="invite-banner" hidden></button>
     <button class="today-card" id="today-card" onclick="openTodayCard()">
       <span class="today-label">오늘의 카드</span>
       <span class="today-sentence" id="today-sentence"></span>
@@ -524,6 +570,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
     </button>
     <div class="toolbar">
       <button class="btn small" id="random-btn" onclick="openRandomCard()">🎲 랜덤으로 한 장</button>
+      <button class="btn ghost small" id="invite-btn" onclick="toggleInviteSelect()">초대 링크</button>
       <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
       <span class="count" id="answered-count"></span>
     </div>
@@ -589,6 +636,15 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 
 <div class="hint" id="global-msg"></div>
 
+<!-- 초대 링크 만들기 바 -->
+<div id="invite-bar" hidden>
+  <span class="invite-count" id="invite-count">0장 선택</span>
+  <input id="invite-group" type="text" maxlength="20" placeholder="모임 이름 (선택)">
+  <button class="btn small" onclick="copyInviteLink()">링크 복사</button>
+  <button class="btn ghost small" onclick="exitInviteSelect()">취소</button>
+  <input id="invite-link-out" readonly hidden>
+</div>
+
 <!-- 토스트 알림 -->
 <div id="toast" hidden>
   <span id="toast-text"></span>
@@ -614,7 +670,11 @@ const state = {
   currentTab: 'positive',
   currentCard: null,
   connectorOverride: null, // null = 자동 감지, true/false = 참가자가 스위치로 정한 값
-  cardRevealed: true       // false면 카드 뒷면이 보이는 상태
+  cardRevealed: true,      // false면 카드 뒷면이 보이는 상태
+  invite: { cards: [], group: '' },  // 초대 링크(URL)로 전달받은 카드와 모임 이름
+  selecting: false,        // 초대 링크 만들기 모드
+  selected: [],            // 초대할 카드로 고른 ID들
+  lastInviteLink: ''       // 마지막으로 만든 초대 링크
 };
 
 /* =====================================================================
@@ -656,17 +716,18 @@ const api = {
     return remoteCall({ action: 'login', nickname, password });
   },
 
-  async save(nickname, password, card, answer, connector) {
+  async save(nickname, password, card, answer, connector, group) {
     if (isLocalMode()) {
       const rows = lsGet(LS_ANSWERS, []);
       const timestamp = new Date().toISOString();
       rows.push({ nickname, cardId: card.id, cardType: card.type,
-                  answer, connector, timestamp });
+                  answer, connector, group: group || '', timestamp });
       localStorage.setItem(LS_ANSWERS, JSON.stringify(rows));
       return { ok: true, timestamp };
     }
     return remoteCall({ action: 'save', nickname, password,
-                        cardId: card.id, cardType: card.type, answer, connector });
+                        cardId: card.id, cardType: card.type,
+                        answer, connector, group: group || '' });
   },
 
   // 기록 한 줄 지우기 — 별칭·카드·시각이 모두 맞는 행을 찾아 삭제
@@ -695,10 +756,21 @@ const api = {
    시작
 ===================================================================== */
 async function init() {
+  applyFontSize();
+
+  // 초대 링크로 들어왔는지 확인 (예: note.html?cards=P04,N12&group=7월모임)
+  const params = new URLSearchParams(location.search);
+  state.invite.cards = (params.get('cards') || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  state.invite.group = (params.get('group') || '').trim();
+
   try {
     const res = await fetch('cards.json');
     const data = await res.json();
     state.cards = data.cards;
+    // 초대 카드 중 실제로 있는 카드만 남기기
+    state.invite.cards = state.invite.cards
+      .filter(id => state.cards.some(c => c.id === id));
   } catch (err) {
     document.getElementById('global-msg').textContent =
       'cards.json을 불러오지 못했습니다. note.html과 같은 폴더에 있는지 확인해 주세요.';
@@ -715,12 +787,20 @@ async function init() {
     openOnboarding();
   }
 
+  // 초대 링크에 모임 이름이 실려 있으면 입장 화면에 미리 채워두기
+  if (state.invite.group) {
+    document.getElementById('login-group').value = state.invite.group;
+  }
+
   // 이전에 연 노트가 있으면 자동으로 다시 열기
   const saved = lsGet('blanktalk-note-session', null);
   if (saved && saved.nickname) {
     document.getElementById('login-nickname').value = saved.nickname;
     document.getElementById('login-password').value = saved.password || '';
-    const result = await tryOpenNote(saved.nickname, saved.password);
+    // 초대 링크의 모임 이름이 있으면 그것을 우선
+    const group = state.invite.group || saved.group || '';
+    document.getElementById('login-group').value = group;
+    const result = await tryOpenNote(saved.nickname, saved.password, group);
     if (result) return;
   }
   showScreen('screen-login');
@@ -779,6 +859,7 @@ function setDraft(cardId, text) {
 async function login() {
   const nickname = document.getElementById('login-nickname').value.trim();
   const password = document.getElementById('login-password').value;
+  const group = document.getElementById('login-group').value.trim();
   const msg = document.getElementById('login-msg');
   msg.textContent = '';
 
@@ -789,13 +870,13 @@ async function login() {
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
   btn.textContent = '노트를 펴는 중…';
-  const ok = await tryOpenNote(nickname, password);
+  const ok = await tryOpenNote(nickname, password, group);
   btn.disabled = false;
   btn.textContent = '노트 열기';
   if (!ok) return;
 }
 
-async function tryOpenNote(nickname, password) {
+async function tryOpenNote(nickname, password, group = '') {
   const msg = document.getElementById('login-msg');
   try {
     const result = await api.login(nickname, password);
@@ -805,9 +886,9 @@ async function tryOpenNote(nickname, password) {
         : '노트를 열지 못했어요. 잠시 후 다시 시도해 주세요.';
       return false;
     }
-    state.user = { nickname, password };
+    state.user = { nickname, password, group };
     localStorage.setItem('blanktalk-note-session',
-      JSON.stringify({ nickname, password }));
+      JSON.stringify({ nickname, password, group }));
     try {
       await loadMyAnswers();
     } catch (err) {
@@ -888,12 +969,13 @@ function renderGrid() {
     const done = card.id in state.myAnswers;
     if (done) answered++;
     const chip = document.createElement('button');
-    chip.className = 'chip' + (done ? ' answered' : '');
+    chip.className = 'chip' + (done ? ' answered' : '')
+      + (state.selecting && state.selected.includes(card.id) ? ' selected' : '');
     chip.innerHTML =
       '<span class="dot"></span>' +
       '<span>' + esc(card.response) + '</span>' +
       '<span class="hamyeon-mini">___ 하면</span>';
-    chip.onclick = () => openCard(card);
+    chip.onclick = () => onChipClick(card, chip);
     grid.appendChild(chip);
   }
   document.getElementById('answered-count').textContent =
@@ -905,6 +987,100 @@ function renderGrid() {
   bar.classList.toggle('neg', type === 'negative');
 
   renderTodayCard();
+  renderInviteBanner();
+}
+
+/* ---------- 초대 링크 만들기 (호스트) ---------- */
+function onChipClick(card, chip) {
+  if (!state.selecting) { openCard(card); return; }
+  const i = state.selected.indexOf(card.id);
+  if (i >= 0) {
+    state.selected.splice(i, 1);
+  } else {
+    if (state.selected.length >= 3) {
+      showToast('초대 카드는 3장까지 고를 수 있어요.');
+      return;
+    }
+    state.selected.push(card.id);
+  }
+  chip.classList.toggle('selected', state.selected.includes(card.id));
+  updateInviteBar();
+}
+
+function toggleInviteSelect() {
+  if (state.selecting) { exitInviteSelect(); return; }
+  state.selecting = true;
+  state.selected = [];
+  document.getElementById('invite-group').value =
+    (state.user && state.user.group) || '';
+  document.getElementById('invite-link-out').hidden = true;
+  document.getElementById('invite-bar').hidden = false;
+  updateInviteBar();
+  showToast('초대할 카드를 탭해서 골라 주세요 (1~3장).');
+}
+
+function exitInviteSelect() {
+  state.selecting = false;
+  state.selected = [];
+  document.getElementById('invite-bar').hidden = true;
+  if (state.currentTab === 'positive' || state.currentTab === 'negative') renderGrid();
+}
+
+function updateInviteBar() {
+  document.getElementById('invite-count').textContent =
+    state.selected.length + '장 선택';
+}
+
+async function copyInviteLink() {
+  if (state.selected.length === 0) {
+    showToast('초대할 카드를 먼저 골라 주세요.');
+    return;
+  }
+  const group = document.getElementById('invite-group').value.trim();
+  let link = location.origin + location.pathname + '?cards=' + state.selected.join(',');
+  if (group) link += '&group=' + encodeURIComponent(group);
+  state.lastInviteLink = link;
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('초대 링크를 복사했어요. 채팅방에 붙여넣으세요.');
+    exitInviteSelect();
+  } catch (err) {
+    // 복사가 안 되는 환경 — 링크를 보여주고 직접 복사하게
+    const out = document.getElementById('invite-link-out');
+    out.value = link;
+    out.hidden = false;
+    out.select();
+    showToast('복사 버튼이 막혀 있어요. 링크를 길게 눌러 복사해 주세요.');
+  }
+}
+
+/* ---------- 초대받은 참가자 안내 배너 ---------- */
+function renderInviteBanner() {
+  const banner = document.getElementById('invite-banner');
+  const ids = state.invite.cards;
+  if (ids.length === 0) { banner.hidden = true; return; }
+  const remaining = ids.filter(id => !(id in state.myAnswers));
+  if (remaining.length === 0) {
+    banner.innerHTML =
+      '<span class="today-label">초대 카드</span>' +
+      '<span class="today-sentence">' + ids.length + '장을 모두 채웠어요 ✓</span>';
+    banner.onclick = null;
+  } else {
+    banner.innerHTML =
+      '<span class="today-label">초대 카드</span>' +
+      '<span class="today-sentence">' + ids.length + '장 중 '
+        + remaining.length + '장이 기다려요</span>' +
+      '<span class="today-mark">답하러 가기 →</span>';
+    banner.onclick = openNextInviteCard;
+  }
+  banner.hidden = false;
+}
+
+function openNextInviteCard() {
+  const nextId = state.invite.cards.find(id => !(id in state.myAnswers));
+  if (!nextId) return;
+  const card = state.cards.find(c => c.id === nextId);
+  openCard(card, true);   // 뒷면부터 — 초대 카드를 뽑는 기분으로
 }
 
 /* ---------- 오늘의 카드 — 날짜에 따라 매일 한 장 ---------- */
@@ -1253,7 +1429,8 @@ async function saveAnswer() {
   try {
     const { nickname, password } = state.user;
     const connector = showHamyeon() ? '하면' : '';
-    const result = await api.save(nickname, password, card, answer, connector);
+    const result = await api.save(nickname, password, card, answer, connector,
+                                  state.user.group);
     if (result.ok) {
       // 시각은 저장소가 알려준 값을 쓴다 — 나중에 그 행을 지울 때 꼭 맞아야 하므로
       const entry = { answer, connector,
@@ -1263,6 +1440,17 @@ async function saveAnswer() {
       setDraft(card.id, '');   // 기록됐으니 초안은 비운다
       renderHistory(card);
       msg.textContent = '노트에 기록되었어요.';
+
+      // 초대 카드였다면 다음 카드로 자연스럽게 이어가기
+      if (state.invite.cards.includes(card.id)) {
+        const remaining = state.invite.cards.filter(id => !(id in state.myAnswers));
+        if (remaining.length > 0) {
+          showToast('다음 초대 카드로 넘어가요. (' + remaining.length + '장 남음)');
+          setTimeout(openNextInviteCard, 1200);
+        } else {
+          showToast('초대 카드를 모두 채웠어요! 🎉');
+        }
+      }
     } else {
       msg.classList.add('error');
       msg.textContent = '기록하지 못했어요. 잠시 후 다시 시도해 주세요.';
@@ -1424,6 +1612,24 @@ function wrapText(ctx, text, maxWidth) {
     lines.push(line);
   }
   return lines.filter(l => l !== '');
+}
+
+/* ---------- 글자 크기 — 보통 / 크게 / 더 크게 ---------- */
+const FONT_SIZES = ['normal', 'large', 'xlarge'];
+const FONT_LABELS = { normal: '보통', large: '크게', xlarge: '더 크게' };
+
+function applyFontSize() {
+  const size = localStorage.getItem('blanktalk-note-fontsize') || 'normal';
+  document.body.classList.toggle('font-large', size === 'large');
+  document.body.classList.toggle('font-xlarge', size === 'xlarge');
+}
+
+function cycleFontSize() {
+  const cur = localStorage.getItem('blanktalk-note-fontsize') || 'normal';
+  const next = FONT_SIZES[(FONT_SIZES.indexOf(cur) + 1) % FONT_SIZES.length];
+  localStorage.setItem('blanktalk-note-fontsize', next);
+  applyFontSize();
+  showToast('글자 크기: ' + FONT_LABELS[next]);
 }
 
 /* ---------- 잔손 도구 ---------- */
