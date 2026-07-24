@@ -1,0 +1,13 @@
+{
+  "name": "블랭크톡 문답 노트",
+  "short_name": "블랭크톡",
+  "description": "빈칸을 채우는 대화, 나를 발견하는 기록",
+  "start_url": "note.html",
+  "display": "standalone",
+  "background_color": "#FAF7F0",
+  "theme_color": "#D97640",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
