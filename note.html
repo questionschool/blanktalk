@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blank Talk — 문답 노트</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="Blank Talk 문답 노트">
+<meta property="og:description" content="빈칸을 채우는 대화, 나를 발견하는 기록">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #FAF7F0;
+  color: #2A2A2A;
+  min-height: 100vh;
+  padding: 20px;
+  touch-action: manipulation;
+}
+header { text-align: center; margin-bottom: 16px; }
+header .logo {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 38px;
+  color: #D97640;
+}
+header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
+
+/* ---------- 공용 버튼 ---------- */
+.btn {
+  display: inline-block;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-family: inherit;
+  cursor: pointer;
+  background: #D97640;
+  color: #fff;
+  transition: opacity 0.15s;
+}
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.ghost {
+  background: transparent;
+  color: #A0764D;
+  border: 1.5px solid #E3D5C0;
+}
+.btn.small { padding: 8px 16px; font-size: 14px; }
+
+/* ---------- 입장 화면 ---------- */
+#screen-login { max-width: 360px; margin: 40px auto 0; text-align: center; }
+#screen-login .box {
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 18px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+#screen-login label {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+  color: #A0764D;
+  margin: 14px 0 4px;
+}
+#screen-login input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 12px;
+  background: #FDFBF6;
+}
+#screen-login input:focus { outline: none; border-color: #D97640; }
+#screen-login .btn { width: 100%; margin-top: 22px; }
+#screen-login .note { font-size: 12.5px; color: #AAA; margin-top: 14px; line-height: 1.6; }
+
+/* ---------- 메인 화면 ---------- */
+#screen-main { max-width: 720px; margin: 0 auto; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.topbar .who { font-size: 15px; color: #6B5B45; }
+.topbar .who b { font-family: 'Gaegu', cursive; font-size: 19px; color: #2A2A2A; }
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.tab {
+  flex: 1;
+  padding: 10px 0;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 22px;
+  background: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  color: #A0764D;
+  cursor: pointer;
+}
+.tab.active { background: #D97640; border-color: #D97640; color: #fff; }
+.tab.active.tab-negative { background: #7A8FA6; border-color: #7A8FA6; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.toolbar .count { font-size: 13.5px; color: #999; }
+
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 15px;
+  color: #2A2A2A;
+}
+.chip .dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #E9E1D2;
+  flex: none;
+}
+.chip.answered { border-color: #D9C9A8; background: #FDF8EC; }
+.chip.answered .dot { background: #D97640; }
+.chip .hamyeon-mini { color: #C9B99A; font-size: 13px; margin-left: auto; flex: none; }
+
+/* ---------- 내 기록 (인덱스) ---------- */
+.notes-section-title {
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 26px;
+  color: #D97640;
+  margin: 18px 0 8px;
+}
+.notes-section-title.neg { color: #7A8FA6; }
+.note-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #EFE7D8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.note-item .sentence { font-size: 15.5px; line-height: 1.5; color: #2A2A2A; }
+.note-item .sentence .blank { font-family: 'Gaegu', cursive; font-weight: 700; color: #D97640; }
+.note-item .when { font-size: 12px; color: #BBB; margin-top: 4px; }
+.notes-empty { color: #AAA; font-size: 14px; padding: 8px 2px; }
+
+/* ---------- 카드 화면 ---------- */
+#screen-card { max-width: 420px; margin: 0 auto; text-align: center; }
+.card {
+  width: 320px;
+  aspect-ratio: 13 / 21;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  animation: cardIn 0.35s ease-out;
+}
+.card .card-top { flex: 1; background: #FBF4D8; position: relative; }
+.card .q-open, .card .q-close, .card .hamyeon {
+  font-family: 'Nanum Pen Script', cursive;
+  color: #D97640;
+  position: absolute;
+}
+.card .q-open  { top: 12px;    left: 20px;   font-size: 38px; }
+.card .q-close { bottom: 52px; right: 22px;  font-size: 38px; }
+.card .hamyeon { bottom: 12px; right: 20px;  font-size: 22px; }
+.card .answer-text {
+  position: absolute;
+  inset: 44px 30px 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.35;
+  color: #2A2A2A;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow: hidden;
+}
+.card .answer-text.placeholder { color: #CDBd8F; font-size: 17px; font-weight: 400; }
+.card .answer-text.long { font-size: 21px; }
+.card .answer-text.verylong { font-size: 17px; }
+.card .card-bottom {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.card .response {
+  font-family: 'Gaegu', cursive;
+  font-weight: 700;
+  font-size: 32px;
+  color: #2A2A2A;
+  line-height: 1.2;
+}
+.card-yellow .card-bottom { background: #ECD850; }
+.card-pink   .card-bottom { background: #E26887; }
+.card-mint   .card-bottom { background: #88DBC2; }
+.card-coral  .card-bottom { background: #EC826B; }
+.card-green  .card-bottom { background: #ABD971; }
+@keyframes cardIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.answer-form { margin-top: 16px; text-align: left; }
+.answer-form textarea {
+  width: 100%;
+  min-height: 74px;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1.5px solid #E3D5C0;
+  border-radius: 12px;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.5;
+}
+.answer-form textarea:focus { outline: none; border-color: #D97640; }
+.card-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: center; flex-wrap: wrap; }
+.status-msg { margin-top: 12px; font-size: 14px; color: #7BA05B; min-height: 20px; }
+.status-msg.error { color: #C0563E; }
+.back-row { text-align: left; margin-bottom: 10px; }
+
+.hint { margin-top: 16px; font-size: 13px; color: #BBB; text-align: center; }
+
+@media (max-width: 480px) {
+  body { padding: 14px; }
+  header .logo { font-size: 32px; }
+  .grid { grid-template-columns: 1fr; }
+  .card { width: 88vw; max-width: 340px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Blank Talk</div>
+  <div class="subtitle">빈칸을 채우는 문답 노트</div>
+</header>
+
+<!-- ========== 1. 입장 화면 ========== -->
+<div id="screen-login" hidden>
+  <div class="box">
+    <label for="login-nickname">별칭</label>
+    <input id="login-nickname" type="text" maxlength="20" placeholder="예: 질문술사" autocomplete="off">
+    <label for="login-password">비밀번호</label>
+    <input id="login-password" type="password" maxlength="30" placeholder="노트를 여는 열쇠">
+    <button class="btn" id="login-btn" onclick="login()">노트 열기</button>
+    <div class="note">
+      처음 쓰는 별칭이면 그 비밀번호로 새 노트가 만들어지고,<br>
+      이미 있는 별칭이면 비밀번호가 맞아야 열려요.
+    </div>
+  </div>
+  <div class="status-msg error" id="login-msg"></div>
+</div>
+
+<!-- ========== 2. 메인 화면 (카드 고르기 / 내 기록) ========== -->
+<div id="screen-main" hidden>
+  <div class="topbar">
+    <span class="who"><b id="who-name"></b> 님의 노트</span>
+    <button class="btn ghost small" onclick="logout()">노트 닫기</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab" id="tab-positive" onclick="switchTab('positive')">긍정 카드</button>
+    <button class="tab tab-negative" id="tab-negative" onclick="switchTab('negative')">부정 카드</button>
+    <button class="tab" id="tab-notes" onclick="switchTab('notes')">내 기록</button>
+  </div>
+
+  <!-- 카드 목록 -->
+  <div id="panel-cards">
+    <div class="toolbar">
+      <button class="btn small" id="random-btn" onclick="openRandomCard()">🎲 랜덤으로 한 장</button>
+      <span class="count" id="answered-count"></span>
+    </div>
+    <div class="grid" id="card-grid"></div>
+  </div>
+
+  <!-- 내 기록 인덱스 -->
+  <div id="panel-notes" hidden>
+    <div class="notes-section-title">긍정 카드의 기록</div>
+    <div id="notes-positive"></div>
+    <div class="notes-section-title neg">부정 카드의 기록</div>
+    <div id="notes-negative"></div>
+  </div>
+</div>
+
+<!-- ========== 3. 카드 화면 (문답 기록) ========== -->
+<div id="screen-card" hidden>
+  <div class="back-row">
+    <button class="btn ghost small" onclick="closeCard()">← 목록으로</button>
+  </div>
+
+  <div class="card" id="card-view">
+    <div class="card-top">
+      <span class="q-open">"</span>
+      <span class="q-close">"</span>
+      <span class="hamyeon">하면</span>
+      <div class="answer-text" id="card-answer-text"></div>
+    </div>
+    <div class="card-bottom">
+      <span class="response" id="card-response"></span>
+    </div>
+  </div>
+
+  <div class="answer-form">
+    <textarea id="answer-input" maxlength="120"
+      placeholder="어떤 순간에 그런가요? 빈칸에 들어갈 답을 적어 보세요."
+      oninput="previewAnswer()"></textarea>
+    <div class="card-actions">
+      <button class="btn" id="save-btn" onclick="saveAnswer()">기록하기</button>
+      <button class="btn ghost" id="png-btn" onclick="downloadPng()">PNG 카드로 저장</button>
+    </div>
+    <div class="status-msg" id="card-msg"></div>
+  </div>
+</div>
+
+<div class="hint" id="global-msg"></div>
+
+<script>
+/* =====================================================================
+   설정 — 구글시트 연동 주소
+   ---------------------------------------------------------------------
+   '설치안내.md'를 따라 Apps Script를 배포한 뒤,
+   받은 웹 앱 URL을 아래 따옴표 안에 붙여넣으세요.
+   비워 두면 "체험 모드"로 동작합니다 (이 브라우저에만 저장).
+===================================================================== */
+const SCRIPT_URL = '';
+
+/* ---------- 전체 상태 ---------- */
+const state = {
+  cards: [],          // cards.json에서 불러온 80장
+  user: null,         // { nickname, password }
+  myAnswers: {},      // cardId → { answer, timestamp } (카드당 최신 답 하나)
+  currentTab: 'positive',
+  currentCard: null
+};
+
+/* =====================================================================
+   저장소 API — 구글시트(원격) 또는 이 브라우저(로컬) 자동 선택
+   모든 함수는 { ok: true, ... } 또는 { ok: false, error: '...' }를 돌려줍니다.
+===================================================================== */
+const isLocalMode = () => SCRIPT_URL.trim() === '';
+
+async function remoteCall(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)   // 헤더를 붙이지 않아야 구글이 순순히 받아줘요
+  });
+  return res.json();
+}
+
+/* --- 로컬 모드 저장소 (localStorage) --- */
+const LS_USERS = 'blanktalk-note-users';      // { 별칭: 비밀번호 }
+const LS_ANSWERS = 'blanktalk-note-answers';  // [ {nickname, cardId, answer, timestamp} ]
+
+function lsGet(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+  catch { return fallback; }
+}
+
+const api = {
+  async login(nickname, password) {
+    if (isLocalMode()) {
+      const users = lsGet(LS_USERS, {});
+      if (!(nickname in users)) {
+        users[nickname] = password;
+        localStorage.setItem(LS_USERS, JSON.stringify(users));
+        return { ok: true, isNew: true };
+      }
+      return users[nickname] === password
+        ? { ok: true, isNew: false }
+        : { ok: false, error: 'wrong_password' };
+    }
+    return remoteCall({ action: 'login', nickname, password });
+  },
+
+  async save(nickname, password, card, answer) {
+    if (isLocalMode()) {
+      const rows = lsGet(LS_ANSWERS, []);
+      rows.push({ nickname, cardId: card.id, cardType: card.type,
+                  answer, timestamp: new Date().toISOString() });
+      localStorage.setItem(LS_ANSWERS, JSON.stringify(rows));
+      return { ok: true };
+    }
+    return remoteCall({ action: 'save', nickname, password,
+                        cardId: card.id, cardType: card.type, answer });
+  },
+
+  async list(nickname, password) {
+    if (isLocalMode()) {
+      const rows = lsGet(LS_ANSWERS, []).filter(r => r.nickname === nickname);
+      return { ok: true, answers: rows };
+    }
+    return remoteCall({ action: 'list', nickname, password });
+  }
+};
+
+/* =====================================================================
+   시작
+===================================================================== */
+async function init() {
+  try {
+    const res = await fetch('cards.json');
+    const data = await res.json();
+    state.cards = data.cards;
+  } catch (err) {
+    document.getElementById('global-msg').textContent =
+      'cards.json을 불러오지 못했습니다. note.html과 같은 폴더에 있는지 확인해 주세요.';
+    return;
+  }
+
+  if (isLocalMode()) {
+    document.getElementById('global-msg').textContent =
+      '체험 모드 — 기록이 이 브라우저에만 저장됩니다. (구글시트 연동은 설치안내.md 참고)';
+  }
+
+  // 이전에 연 노트가 있으면 자동으로 다시 열기
+  const saved = lsGet('blanktalk-note-session', null);
+  if (saved && saved.nickname) {
+    document.getElementById('login-nickname').value = saved.nickname;
+    document.getElementById('login-password').value = saved.password || '';
+    const result = await tryOpenNote(saved.nickname, saved.password);
+    if (result) return;
+  }
+  showScreen('screen-login');
+}
+
+/* ---------- 화면 전환 ---------- */
+function showScreen(id) {
+  for (const s of ['screen-login', 'screen-main', 'screen-card']) {
+    document.getElementById(s).hidden = (s !== id);
+  }
+}
+
+/* =====================================================================
+   입장 / 퇴장
+===================================================================== */
+async function login() {
+  const nickname = document.getElementById('login-nickname').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  msg.textContent = '';
+
+  if (!nickname || !password) {
+    msg.textContent = '별칭과 비밀번호를 모두 넣어 주세요.';
+    return;
+  }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = '여는 중…';
+  const ok = await tryOpenNote(nickname, password);
+  btn.disabled = false;
+  btn.textContent = '노트 열기';
+  if (!ok) return;
+}
+
+async function tryOpenNote(nickname, password) {
+  const msg = document.getElementById('login-msg');
+  try {
+    const result = await api.login(nickname, password);
+    if (!result.ok) {
+      msg.textContent = result.error === 'wrong_password'
+        ? '비밀번호가 맞지 않아요. 이미 쓰이고 있는 별칭일 수도 있어요.'
+        : '노트를 열지 못했어요. 잠시 후 다시 시도해 주세요.';
+      return false;
+    }
+    state.user = { nickname, password };
+    localStorage.setItem('blanktalk-note-session',
+      JSON.stringify({ nickname, password }));
+    await loadMyAnswers();
+    document.getElementById('who-name').textContent = nickname;
+    switchTab('positive');
+    showScreen('screen-main');
+    return true;
+  } catch (err) {
+    msg.textContent = '연결에 실패했어요. 인터넷과 SCRIPT_URL 설정을 확인해 주세요.';
+    return false;
+  }
+}
+
+function logout() {
+  state.user = null;
+  state.myAnswers = {};
+  localStorage.removeItem('blanktalk-note-session');
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-msg').textContent = '';
+  showScreen('screen-login');
+}
+
+/* ---------- 내 답변 불러와 정리 (카드당 최신 답 하나) ---------- */
+async function loadMyAnswers() {
+  const { nickname, password } = state.user;
+  const result = await api.list(nickname, password);
+  state.myAnswers = {};
+  if (result.ok && Array.isArray(result.answers)) {
+    for (const row of result.answers) {   // 나중 행이 최신 — 덮어쓰기
+      state.myAnswers[row.cardId] = {
+        answer: row.answer,
+        timestamp: row.timestamp
+      };
+    }
+  }
+}
+
+/* =====================================================================
+   메인 화면 — 탭, 카드 목록, 내 기록 인덱스
+===================================================================== */
+function switchTab(tab) {
+  state.currentTab = tab;
+  for (const t of ['positive', 'negative', 'notes']) {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  }
+  document.getElementById('panel-cards').hidden = (tab === 'notes');
+  document.getElementById('panel-notes').hidden = (tab !== 'notes');
+  if (tab === 'notes') renderNotes();
+  else renderGrid();
+}
+
+function cardsOfType(type) {
+  return state.cards.filter(c => c.type === type);
+}
+
+function renderGrid() {
+  const type = state.currentTab;
+  const cards = cardsOfType(type);
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+  let answered = 0;
+  for (const card of cards) {
+    const done = card.id in state.myAnswers;
+    if (done) answered++;
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (done ? ' answered' : '');
+    chip.innerHTML =
+      '<span class="dot"></span>' +
+      '<span>' + esc(card.response) + '</span>' +
+      '<span class="hamyeon-mini">___ 하면</span>';
+    chip.onclick = () => openCard(card);
+    grid.appendChild(chip);
+  }
+  document.getElementById('answered-count').textContent =
+    '기록 ' + answered + ' / ' + cards.length;
+}
+
+function openRandomCard() {
+  const cards = cardsOfType(state.currentTab);
+  const notAnswered = cards.filter(c => !(c.id in state.myAnswers));
+  const pool = notAnswered.length > 0 ? notAnswered : cards;
+  const card = pool[Math.floor(Math.random() * pool.length)];
+  openCard(card);
+}
+
+function renderNotes() {
+  for (const type of ['positive', 'negative']) {
+    const box = document.getElementById('notes-' + type);
+    box.innerHTML = '';
+    const answeredCards = cardsOfType(type).filter(c => c.id in state.myAnswers);
+    if (answeredCards.length === 0) {
+      box.innerHTML = '<div class="notes-empty">아직 기록한 카드가 없어요.</div>';
+      continue;
+    }
+    for (const card of answeredCards) {
+      const entry = state.myAnswers[card.id];
+      const item = document.createElement('button');
+      item.className = 'note-item';
+      item.innerHTML =
+        '<div class="sentence">“<span class="blank">' + esc(entry.answer) +
+        '</span>” 하면 <b>' + esc(card.response) + '</b></div>' +
+        '<div class="when">' + formatDate(entry.timestamp) + '</div>';
+      item.onclick = () => openCard(card);
+      box.appendChild(item);
+    }
+  }
+}
+
+/* =====================================================================
+   카드 화면 — 문답 기록
+===================================================================== */
+function openCard(card) {
+  state.currentCard = card;
+  const view = document.getElementById('card-view');
+  view.className = 'card card-' + card.color;
+  document.getElementById('card-response').textContent = card.response;
+
+  const existing = state.myAnswers[card.id];
+  document.getElementById('answer-input').value = existing ? existing.answer : '';
+  document.getElementById('card-msg').textContent =
+    existing ? formatDate(existing.timestamp) + '에 기록한 답이에요. 고쳐서 다시 기록할 수도 있어요.' : '';
+  document.getElementById('card-msg').classList.remove('error');
+  previewAnswer();
+  showScreen('screen-card');
+}
+
+function closeCard() {
+  state.currentCard = null;
+  showScreen('screen-main');
+  switchTab(state.currentTab);   // 목록의 기록 표시 갱신
+}
+
+/* 카드 위 빈칸에 입력 중인 답을 실시간으로 보여주기 */
+function previewAnswer() {
+  const text = document.getElementById('answer-input').value.trim();
+  const el = document.getElementById('card-answer-text');
+  el.classList.remove('placeholder', 'long', 'verylong');
+  if (!text) {
+    el.classList.add('placeholder');
+    el.textContent = '빈칸에 들어갈\n나의 답이 여기에 담겨요';
+  } else {
+    el.textContent = text;
+    if (text.length > 55) el.classList.add('verylong');
+    else if (text.length > 28) el.classList.add('long');
+  }
+  document.getElementById('png-btn').disabled = !text;
+}
+
+async function saveAnswer() {
+  const card = state.currentCard;
+  const answer = document.getElementById('answer-input').value.trim();
+  const msg = document.getElementById('card-msg');
+  msg.classList.remove('error');
+  if (!answer) {
+    msg.classList.add('error');
+    msg.textContent = '빈칸에 담을 답을 먼저 적어 주세요.';
+    return;
+  }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = '기록 중…';
+  try {
+    const { nickname, password } = state.user;
+    const result = await api.save(nickname, password, card, answer);
+    if (result.ok) {
+      state.myAnswers[card.id] = { answer, timestamp: new Date().toISOString() };
+      msg.textContent = '노트에 기록되었어요.';
+    } else {
+      msg.classList.add('error');
+      msg.textContent = '기록하지 못했어요. 잠시 후 다시 시도해 주세요.';
+    }
+  } catch (err) {
+    msg.classList.add('error');
+    msg.textContent = '연결에 실패했어요. 인터넷을 확인하고 다시 시도해 주세요.';
+  }
+  btn.disabled = false;
+  btn.textContent = '기록하기';
+}
+
+/* =====================================================================
+   PNG 카드 출력 — 캔버스에 카드를 그려서 내려받기
+===================================================================== */
+const CANVAS_W = 780;                  // 13:21 비율
+const CANVAS_H = 1260;
+const COLOR_HEX = {
+  yellow: '#ECD850', pink: '#E26887', mint: '#88DBC2',
+  coral: '#EC826B', green: '#ABD971'
+};
+
+async function downloadPng() {
+  const card = state.currentCard;
+  const answer = document.getElementById('answer-input').value.trim();
+  if (!card || !answer) return;
+
+  // 캔버스에 쓸 손글씨 폰트가 준비될 때까지 기다리기
+  await document.fonts.load("700 60px Gaegu", "가");
+  await document.fonts.load("60px 'Nanum Pen Script'", "하");
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  const ctx = canvas.getContext('2d');
+
+  // 둥근 모서리 카드 모양으로 잘라내기
+  roundedRectPath(ctx, 0, 0, CANVAS_W, CANVAS_H, 34);
+  ctx.clip();
+
+  const half = CANVAS_H / 2;
+
+  // 윗면(연노랑)과 아랫면(카드 색)
+  ctx.fillStyle = '#FBF4D8';
+  ctx.fillRect(0, 0, CANVAS_W, half);
+  ctx.fillStyle = COLOR_HEX[card.color] || '#ECD850';
+  ctx.fillRect(0, half, CANVAS_W, half);
+
+  // 따옴표와 '하면'
+  ctx.fillStyle = '#D97640';
+  ctx.font = "92px 'Nanum Pen Script'";
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillText('"', 52, 28);
+  ctx.textAlign = 'right';
+  ctx.fillText('"', CANVAS_W - 56, half - 210);
+  ctx.font = "54px 'Nanum Pen Script'";
+  ctx.fillText('하면', CANVAS_W - 52, half - 84);
+
+  // 빈칸의 답 — 길이에 맞춰 글씨 크기 고르고 줄바꿈해서 가운데에
+  ctx.fillStyle = '#2A2A2A';
+  drawCenteredText(ctx, answer, {
+    x: CANVAS_W / 2, areaTop: 120, areaBottom: half - 160,
+    maxWidth: CANVAS_W - 160,
+    sizes: [64, 56, 48, 40, 34], weight: 700, family: 'Gaegu'
+  });
+
+  // 반응 문구 — 아랫면 가운데에
+  drawCenteredText(ctx, card.response, {
+    x: CANVAS_W / 2, areaTop: half + 80, areaBottom: CANVAS_H - 120,
+    maxWidth: CANVAS_W - 120,
+    sizes: [78, 66, 56], weight: 700, family: 'Gaegu'
+  });
+
+  // 작은 로고
+  ctx.fillStyle = 'rgba(42,42,42,0.38)';
+  ctx.font = "34px 'Nanum Pen Script'";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Blank Talk', CANVAS_W / 2, CANVAS_H - 42);
+
+  // 내려받기
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    // 한글 파일명은 브라우저가 무시하는 경우가 있어 영문으로
+    const today = new Date();
+    const stamp = today.getFullYear()
+      + String(today.getMonth() + 1).padStart(2, '0')
+      + String(today.getDate()).padStart(2, '0');
+    a.download = 'blanktalk-' + card.id + '-' + stamp + '.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/png');
+}
+
+function roundedRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* 주어진 영역 안에 들어가도록 글씨 크기를 줄여 가며 가운데 정렬로 그리기 */
+function drawCenteredText(ctx, text, opt) {
+  let chosenSize = opt.sizes[opt.sizes.length - 1];
+  let chosenLines = [text];
+  for (const size of opt.sizes) {
+    ctx.font = opt.weight + ' ' + size + 'px ' + opt.family;
+    const lines = wrapText(ctx, text, opt.maxWidth);
+    const height = lines.length * size * 1.35;
+    if (height <= opt.areaBottom - opt.areaTop) {
+      chosenSize = size;
+      chosenLines = lines;
+      break;
+    }
+    chosenLines = lines;   // 마지막 크기라도 일단 그린다
+  }
+  ctx.font = opt.weight + ' ' + chosenSize + 'px ' + opt.family;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lineHeight = chosenSize * 1.35;
+  const centerY = (opt.areaTop + opt.areaBottom) / 2;
+  const startY = centerY - (chosenLines.length - 1) * lineHeight / 2;
+  chosenLines.forEach((line, i) => {
+    ctx.fillText(line, opt.x, startY + i * lineHeight);
+  });
+}
+
+/* 단어(공백) 기준으로 줄바꿈, 한 단어가 길면 글자 단위로 자르기 */
+function wrapText(ctx, text, maxWidth) {
+  const lines = [];
+  for (const paragraph of text.split('\n')) {
+    let line = '';
+    for (const word of paragraph.split(' ')) {
+      const tryLine = line ? line + ' ' + word : word;
+      if (ctx.measureText(tryLine).width <= maxWidth) {
+        line = tryLine;
+        continue;
+      }
+      if (line) { lines.push(line); line = ''; }
+      // 한 단어가 통째로 길 때: 글자 단위로 쪼개기
+      let piece = '';
+      for (const ch of word) {
+        if (ctx.measureText(piece + ch).width > maxWidth && piece) {
+          lines.push(piece);
+          piece = '';
+        }
+        piece += ch;
+      }
+      line = piece;
+    }
+    lines.push(line);
+  }
+  return lines.filter(l => l !== '');
+}
+
+/* ---------- 잔손 도구 ---------- */
+function esc(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+}
+
+init();
+</script>
+</body>
+</html>
