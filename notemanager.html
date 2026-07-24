@@ -174,7 +174,9 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 <!-- ========== 입장 ========== -->
 <div id="screen-login" hidden>
   <div class="box">
-    <label for="master-pw">관리자 비밀번호</label>
+    <label for="master-nick">관리자 별칭</label>
+    <input id="master-nick" type="text" maxlength="20" autocomplete="off" style="margin-bottom:12px;">
+    <label for="master-pw">비밀번호</label>
     <input id="master-pw" type="password" maxlength="30">
     <button class="btn" id="login-btn" onclick="login()">열기</button>
   </div>
@@ -213,7 +215,7 @@ header .subtitle { font-size: 14px; color: #888; margin-top: 2px; }
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNLZ_f29BIN0wq4q4LUgatuNp2X-qjit29taUZBu1I70hO22Xytmb8MOr6_zvFgFsh/exec';
 
 const state = {
-  master: '',   // 입장할 때 확인된 관리자 비밀번호
+  admin: null,  // 입장한 관리자 { nickname, password }
   rows: [],     // 전체 기록 (최근 것부터)
   cards: {}     // 카드ID → 카드 정보
 };
@@ -227,18 +229,18 @@ async function remoteCall(payload) {
 }
 
 const api = {
-  async adminList(master) {
+  async adminList(nickname, password) {
     if (isLocalMode()) {
       // 체험 모드 — 이 브라우저의 note.html 기록을 본다 (테스트용)
-      if (master !== 'tlp3079') return { ok: false, error: 'wrong_master' };
+      if (password !== 'tlp3079') return { ok: false, error: 'wrong_master' };
       const rows = JSON.parse(localStorage.getItem('blanktalk-note-answers') || '[]');
       return { ok: true, answers: rows };
     }
-    return remoteCall({ action: 'adminlist', master });
+    return remoteCall({ action: 'adminlist', nickname, password });
   },
-  async adminDelete(master, row) {
+  async adminDelete(nickname, password, row) {
     if (isLocalMode()) {
-      if (master !== 'tlp3079') return { ok: false, error: 'wrong_master' };
+      if (password !== 'tlp3079') return { ok: false, error: 'wrong_master' };
       const rows = JSON.parse(localStorage.getItem('blanktalk-note-answers') || '[]');
       const kept = rows.filter(r =>
         !(r.nickname === row.nickname && r.cardId === row.cardId && r.timestamp === row.timestamp));
@@ -246,8 +248,9 @@ const api = {
       localStorage.setItem('blanktalk-note-answers', JSON.stringify(kept));
       return { ok: true };
     }
-    return remoteCall({ action: 'admindelete', master,
-      nickname: row.nickname, cardId: row.cardId, timestamp: row.timestamp });
+    // rowNickname = 지우려는 기록 주인의 별칭 (관리자 별칭과 구별)
+    return remoteCall({ action: 'admindelete', nickname, password,
+      rowNickname: row.nickname, cardId: row.cardId, timestamp: row.timestamp });
   }
 };
 
@@ -281,21 +284,22 @@ function showToast(text) {
 
 /* ---------- 입장 / 퇴장 ---------- */
 async function login() {
+  const nickname = document.getElementById('master-nick').value.trim();
   const pw = document.getElementById('master-pw').value;
   const msg = document.getElementById('login-msg');
   const btn = document.getElementById('login-btn');
   msg.textContent = '';
-  if (!pw) { msg.textContent = '비밀번호를 넣어 주세요.'; return; }
+  if (!nickname || !pw) { msg.textContent = '별칭과 비밀번호를 모두 넣어 주세요.'; return; }
   btn.disabled = true;
   btn.textContent = '확인 중…';
   try {
-    const result = await api.adminList(pw);
+    const result = await api.adminList(nickname, pw);
     if (!result.ok) {
       msg.textContent = result.error === 'wrong_master'
-        ? '비밀번호가 맞지 않아요.'
+        ? '별칭 또는 비밀번호가 맞지 않아요.'
         : '열지 못했어요. 잠시 후 다시 시도해 주세요.';
     } else {
-      state.master = pw;
+      state.admin = { nickname, password: pw };
       acceptRows(result.answers);
       showScreen('screen-main');
     }
@@ -307,7 +311,7 @@ async function login() {
 }
 
 function logout() {
-  state.master = '';
+  state.admin = null;
   state.rows = [];
   document.getElementById('master-pw').value = '';
   showScreen('screen-login');
@@ -315,7 +319,7 @@ function logout() {
 
 async function reload() {
   try {
-    const result = await api.adminList(state.master);
+    const result = await api.adminList(state.admin.nickname, state.admin.password);
     if (result.ok) {
       acceptRows(result.answers);
       showToast('새로 불러왔어요.');
@@ -386,6 +390,7 @@ function render() {
   const nickCount = new Set(state.rows.map(r => r.nickname)).size;
   const groupCount = new Set(state.rows.map(r => r.group || '').filter(Boolean)).size;
   document.getElementById('summary').innerHTML =
+    '관리자 <b>' + esc(state.admin ? state.admin.nickname : '') + '</b> · ' +
     '전체 <b>' + state.rows.length + '개</b> 기록 · 별칭 <b>' + nickCount +
     '</b> · 모임 <b>' + groupCount + '</b>' +
     (rows.length !== state.rows.length ? ' — 지금 <b>' + rows.length + '개</b> 표시 중' : '');
@@ -442,7 +447,7 @@ function confirmDelete(btn, row) {
 
 async function deleteRow(row) {
   try {
-    const result = await api.adminDelete(state.master, row);
+    const result = await api.adminDelete(state.admin.nickname, state.admin.password, row);
     if (!result.ok) {
       showToast('삭제하지 못했어요. 새로고침 후 다시 시도해 주세요.');
       return;
@@ -525,9 +530,11 @@ function formatDate(iso) {
   return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
 }
 
-document.getElementById('master-pw').addEventListener('keydown', e => {
-  if (e.key === 'Enter') login();
-});
+for (const id of ['master-nick', 'master-pw']) {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+}
 
 init();
 </script>
